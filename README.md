@@ -126,9 +126,9 @@ ASTra builds a **permanent knowledge graph** of your codebase. Before every AI t
 
 ### 🌐 Open in Browser
 
-<a href="https://charan-place.github.io/ASTra-MCP/demo.html"><b>charan-place.github.io/ASTra-MCP/demo.html ↗</b></a>
+<a href="https://astra-mcp.vercel.app/demo"><b>astra-mcp.vercel.app/demo ↗</b></a>
 
-*(Live via GitHub Pages — full D3 interactivity)*
+*(Live on Vercel · full D3 interactivity)*
 
 </td>
 <td align="center" width="50%">
