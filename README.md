@@ -1,173 +1,359 @@
-# ASTra MCP — Permanent Code Memory for AI Coding Assistants
+<div align="center">
 
-> **The problem:** Your AI assistant (Claude Code, Cursor, Codex) reads entire files to understand your codebase. On a 100k-line repo, that's 500k+ tokens per session. Slow. Expensive. Hits context limits.
->
-> **The fix:** ASTra builds a permanent knowledge graph of your codebase. When your AI assistant starts a task, ASTra injects **only the 5 most relevant functions** — not 50 whole files. Result: **98.9% token reduction** on real projects.
+<img src="https://img.shields.io/badge/ASTra-MCP-7c6af7?style=for-the-badge&logo=data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0iI2ZmZiI+PHBhdGggZD0iTTEyIDJsLTcgN2gxNHptMCAyMGw3LTdoLTE0eiIvPjwvc3ZnPg==" alt="ASTra MCP" height="60"/>
 
----
+# 🕸️ ASTra MCP
 
-## What ASTra Does For You
+### **Permanent Code Memory for AI Coding Assistants**
 
-You ask your AI assistant something. Before it reads any files, it asks ASTra: *"What in this codebase is relevant to what the user wants?"* ASTra answers in under 100ms with the minimum code needed.
+*Stop burning tokens. Start saving thousands.*
 
-You save money. You save time. Your AI assistant gets smarter because it has room in its context window to actually think.
+<br/>
 
----
+![License](https://img.shields.io/badge/License-MIT-5eead4?style=flat-square)
+![Python](https://img.shields.io/badge/Python-3.10+-3776AB?style=flat-square&logo=python&logoColor=white)
+![MCP](https://img.shields.io/badge/Protocol-MCP-7c6af7?style=flat-square)
+![Token Reduction](https://img.shields.io/badge/Token%20Reduction-98.9%25-ff3a8c?style=flat-square)
+![Local First](https://img.shields.io/badge/Local-First-eab308?style=flat-square)
+![Status](https://img.shields.io/badge/Status-Stable-5eead4?style=flat-square)
 
-## Real Numbers from Real Projects
+[Quickstart](#-quickstart) · [Live Demo](#-live-demo) · [How It Works](#-how-it-works) · [Use Cases](#-what-questions-astra-can-answer) · [Install](#-installation) · [FAQ](#-frequently-asked-questions)
 
-Tested on a personal monorepo with 4 projects (Python + TypeScript):
-
-| Metric | Without ASTra | With ASTra |
-|---|---|---|
-| Tokens per coding task | ~112,000 | ~1,250 |
-| Cost per task (Claude Sonnet) | $0.34 | $0.004 |
-| Time to context | 12–18 seconds | <1 second |
-| Files the AI must read | 20–40 | 0 |
-
-**Translation:** A developer running 50 AI-assisted tasks per day cuts spending from ~$17/day to ~$0.20/day. Across a 10-person team: roughly **$5,000+/month saved**.
+</div>
 
 ---
 
-## Who Benefits
+<table>
+<tr>
+<td width="50%" valign="top">
 
-### Individual developers
-- Stop burning tokens on huge `Read` operations
-- Faster AI responses (less context = less latency)
-- Keep working in large codebases without hitting context limits
+### 🔥 The Problem
 
-### Engineering teams
-- Predictable AI spend per developer
-- Less time spent watching AI assistants spin reading files
-- Better onboarding — new engineers' AI assistants instantly "know" the codebase
+Your AI assistant **reads entire files** to understand your codebase. On a 100k-line repo, that's **500k+ tokens per session**.
 
-### Open-source maintainers
-- Contributors using AI assistants get accurate, scoped suggestions
-- AI-generated PRs are more focused (smaller context = less hallucination)
+- ⏱️ Slow responses
+- 💸 Burns API credits
+- 🚫 Hits context limits
+- 🎯 Misses connections between files
 
-### Companies with proprietary codebases
-- Local-first: index runs entirely on your machine. No code sent to external services.
-- Reduce Claude/OpenAI API spend without losing AI productivity
+</td>
+<td width="50%" valign="top">
 
----
+### ⚡ The Fix
 
-## What Questions ASTra Can Answer
+ASTra builds a **permanent knowledge graph** of your codebase. Before every AI task, it injects **only the 5 most relevant functions** — not 50 whole files.
 
-Ask your AI assistant any of these — it pulls only the relevant code via ASTra:
+- 🚀 Instant context
+- 💰 Slashes API spend ~99%
+- ♾️ Never hits context limits
+- 🧠 Sees the whole system
 
-### "Help me build something"
-- "Add 2FA to login" → ASTra returns auth functions, session handlers, user model
-- "Add rate limiting to the API" → ASTra returns middleware, existing throttle logic, where to plug it in
-- "Refactor the payment flow" → all payment-touching symbols + their callers
-
-### "Help me find something"
-- "Where do we validate webhooks?" → exact file + function + line
-- "Find every file that loads API keys" → security audit in seconds
-- "Show me all strategy implementations" → semantic match, not just grep
-
-### "Help me understand impact"
-- "Who calls `process_order()`?" → full caller list before you rename it
-- "What does `place_bracket_order` depend on?" → callee chain, no surprises
-- "Will changing this signature break anything?" → blast radius mapped instantly
-
-### "Help me skim a file"
-- "Symbol map of api_client.py" → all functions + signatures, no bodies
-- "What's in strategies/base.py?" → bird's-eye view in 50 tokens, not 500
-
-### "Help me remember"
-- "Did I solve this kind of bug before?" → past session recall
-- "What approach did we try last week?" → memory across sessions
+</td>
+</tr>
+</table>
 
 ---
 
-## How You'll Actually Use It Day-to-Day
+## 📊 Real Numbers from Real Projects
 
-### Day 1 — Install (one-time, 2 minutes)
-You run the installer. ASTra adds itself as an MCP server to your AI assistant. It indexes your codebase in the background — 60 seconds for a medium repo. You forget it exists.
+<div align="center">
 
-### Day 2 onwards — You do nothing
-You keep using Claude Code / Cursor / Codex exactly as before. Behind the scenes, your AI assistant automatically calls ASTra before reading files. You never see it happen. You just notice:
-- Your AI assistant responds faster
-- It picks the right files on the first try
-- You stop hitting context-window errors
-- Your monthly API bill drops dramatically
+<table>
+<thead>
+<tr>
+<th>Metric</th>
+<th>❌ Without ASTra</th>
+<th>✅ With ASTra</th>
+<th>📉 Saved</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><b>Tokens per coding task</b></td>
+<td><code>~112,000</code></td>
+<td><code>~1,250</code></td>
+<td><b style="color:#5eead4">98.9%</b></td>
+</tr>
+<tr>
+<td><b>Cost per task</b> (Claude Sonnet)</td>
+<td><code>$0.34</code></td>
+<td><code>$0.004</code></td>
+<td><b>$0.336</b></td>
+</tr>
+<tr>
+<td><b>Time to context</b></td>
+<td><code>12–18 s</code></td>
+<td><code>&lt; 1 s</code></td>
+<td><b>15× faster</b></td>
+</tr>
+<tr>
+<td><b>Files AI must read</b></td>
+<td><code>20–40</code></td>
+<td><code>0</code></td>
+<td><b>100%</b></td>
+</tr>
+</tbody>
+</table>
 
-### When the codebase changes
-ASTra watches your files. You edit a function → ASTra re-indexes that file in milliseconds. The graph stays fresh forever. No "rebuild the index" step.
+</div>
 
----
-
-## The Knowledge Dashboard
-
-Run `astra dashboard` → open `http://localhost:7865`.
-
-You get a live visual brain of your codebase:
-
-### Dashboard tab
-- **Token savings counter** — running total of tokens ASTra has saved you
-- **Cost saved estimate** — actual dollar value at current Claude pricing
-- **Live token bars** — every AI query shown as bar chart: naive read vs ASTra
-- **Reduction ring** — % saved per query, animated
-- **Query history** — last 20 AI tasks with their token cost
-
-### Knowledge Graph tab
-- Interactive force-directed map of your entire codebase
-- **Nodes** = files (yellow), classes (orange), functions (cyan)
-- **Edges** = who calls whom, who contains what
-- Click a node → see its callers, callees, signature, file location
-- Filter by file or symbol name
-- Per-query graph snapshots: see exactly which nodes ASTra picked for each AI task
-
-This is useful for:
-- **Code reviews** — visualize what a PR touches
-- **Onboarding** — new engineers see the whole shape of the system
-- **Refactoring** — spot tightly-coupled clusters
-- **Demos to stakeholders** — show "this is the surface area of our codebase"
-
----
-
-## Multi-Project Support
-
-Got a monorepo? Got multiple repos? Both work.
-
-- Point ASTra at any directory → it indexes everything recursively
-- Stays per-project: each repo gets its own `.astra/` folder
-- Same MCP server handles all projects — your AI assistant just picks the right context per workspace
-
-Tested with: Python backends, Next.js frontends, FastAPI services, trading bots, ML pipelines.
+> 💡 **Translation:** A developer running 50 AI-assisted tasks per day cuts spending from **~$17/day to ~$0.20/day**. Across a 10-engineer team: roughly **$5,000+/month saved**.
 
 ---
 
-## Privacy & Security
+## 🎬 Live Demo
 
-- **Local-first.** Your code never leaves your machine. Index lives in SQLite on disk.
-- **No telemetry.** ASTra doesn't phone home.
-- **No external API keys needed.** Embeddings model runs locally (sentence-transformers).
-- **Self-hosted dashboard.** Runs on `localhost`. Not exposed to the internet.
-- **Open source.** MIT licensed. Audit the code, fork it, ship it.
+<details open>
+<summary><b>🖥️ Knowledge Graph Dashboard</b> — click to expand</summary>
+<br/>
 
-For enterprise: ASTra is safe to run on machines that touch confidential code (medical, financial, defense). Nothing leaves the box.
-
----
-
-## Installation
-
-### Via Claude Code plugin (recommended)
-```bash
-# In Claude Code, open Manage Plugins → Marketplace → Install "astra"
-# Or:
-claude plugin install astra
 ```
-ASTra auto-installs, registers as MCP server, and indexes your current workspace.
+┌──────────────────────────────────────────────────────────────────┐
+│  🕸  ASTra Dashboard                            localhost:7865    │
+├──────────────────────────────────────────────────────────────────┤
+│                                                                  │
+│   ╭────────────────╮ ╭────────────────╮ ╭────────────────╮       │
+│   │ Symbols        │ │ Token Savings  │ │ Cost Saved     │       │
+│   │     605        │ │   1.2M tokens  │ │    $4.56       │       │
+│   ╰────────────────╯ ╰────────────────╯ ╰────────────────╯       │
+│                                                                  │
+│   📊 LAST QUERY — "add rate limiting"                            │
+│   ████████████████████████████████████  Naive: 112,271 tokens    │
+│   █                                     ASTra:   1,254 tokens    │
+│                                                                  │
+│              ╱──────────────╲                                    │
+│             ╱     98.9%      ╲          Reduction Ring          │
+│            │   ▰▰▰▰▰▰▰▰▰      │                                  │
+│             ╲                ╱                                   │
+│              ╲──────────────╱                                    │
+│                                                                  │
+└──────────────────────────────────────────────────────────────────┘
+```
 
-### Via pip (universal — works with Cursor, Codex, any MCP client)
+</details>
+
+<details open>
+<summary><b>🧬 Interactive 3-Level Knowledge Graph</b></summary>
+<br/>
+
+```
+LEVEL 1 — FOLDERS                LEVEL 2 — FILES INSIDE FOLDER
+                                                                
+    📁 core ────12 calls───►📁 strategies        ┌─────────────┐
+        │                       │                │ api_client  │──┐
+        │                       ▼                │ data_fetch  │  │
+        ▼                   📁 execution         │ trade_exec  │◄─┘
+    📁 monitoring ◄─────────────┘                └─────────────┘
+
+           (zoom: dbl-click any folder)
+
+LEVEL 3 — FUNCTIONS (call graph w/ direction)
+
+    ○ _sign ───► ○ _request ───► ○ get_wallet
+                       │                 ▲
+                       └─────►  ○ place_order
+                                         │
+                                         ▼
+                                ○ apply_fees
+```
+
+**Live features:**
+- 🔴 **Pink pulse** = nodes ASTra picked for current query
+- 🟠 **Orange** = nodes from previous query
+- 🟡 **Yellow** = older query trail
+- ↘️ **Edge thickness** = call frequency
+- 🖱️ **Hover** = light up full caller→callee path
+- 🔄 **Auto-refresh** when MCP tool fires new query
+
+</details>
+
+<details>
+<summary><b>📈 Live Query Trace</b> — see ASTra in action</summary>
+<br/>
+
+```html
+You ask Claude Code:    "Add 2FA to the login flow"
+                        ↓
+                    [MCP call]
+                        ↓
+   ┌────────────────────────────────────────────┐
+   │ ASTra fires:                               │
+   │                                            │
+   │   1. embed("Add 2FA to login flow")        │
+   │      → 384-dim vector                      │
+   │                                            │
+   │   2. cosine top-5 → SEEDS:                 │
+   │      • login()       0.81                  │
+   │      • auth_check()  0.78                  │
+   │      • User.verify() 0.74                  │
+   │      • session_new() 0.71                  │
+   │      • hash_pw()     0.68                  │
+   │                                            │
+   │   3. PageRank from seeds (top 25):         │
+   │      → JWT helpers, session store,         │
+   │        rate limiter, error pages,          │
+   │        logger, middleware...               │
+   │                                            │
+   │   4. Serialize → 1,254 tokens              │
+   │                                            │
+   │   5. Snapshot HTML written                 │
+   └────────────────────────────────────────────┘
+                        ↓
+   Claude responds with focused 2FA code
+   using ONLY the relevant 30 symbols.
+```
+
+</details>
+
+<details>
+<summary><b>🔧 Per-File Symbol Map</b> (instead of reading 500 lines)</summary>
+<br/>
+
+```python
+# What ASTra returns when LLM asks "show me api_client.py"
+# 78 tokens. Reading the file would be 4,200 tokens.
+
+class CoinSwitchClient:
+  def __init__(api_key, secret_key) -> None
+    # Loads Ed25519 private key for HMAC signing
+  def _sign(method, path, params) -> tuple[str, str]
+    # Returns (signature_hex, epoch_ms)
+  def place_order(symbol, side, qty, ...) -> Dict
+    # Places futures order with bracket logic
+  def get_futures_balance_usdt() -> float
+    # Returns USDT available in futures wallet
+  ...
+```
+
+</details>
+
+---
+
+## 🚀 Quickstart
+
+```bash
+# 1. Install
+pip install astra-mcp
+
+# 2. Index your project (one-time, ~60s)
+cd ~/your-project
+astra init
+
+# 3. Add to your AI assistant
+# (Claude Code auto-discovers if installed via plugin)
+
+# 4. Open dashboard (optional but cool)
+astra dashboard
+# → http://localhost:7865
+```
+
+That's it. Your AI assistant now uses ASTra automatically for every coding task.
+
+---
+
+## 🎯 What Questions ASTra Can Answer
+
+<table>
+<tr>
+<th width="30%">Category</th>
+<th>Example Questions</th>
+</tr>
+<tr>
+<td><b>🛠 Build something</b></td>
+<td>
+"Add 2FA to login" · "Add rate limiting" · "Refactor payment flow"
+</td>
+</tr>
+<tr>
+<td><b>🔍 Find something</b></td>
+<td>
+"Where do we validate webhooks?" · "Find files leaking API keys" · "Show me all strategy implementations"
+</td>
+</tr>
+<tr>
+<td><b>💥 Impact analysis</b></td>
+<td>
+"Who calls <code>process_order()</code>?" · "What does <code>place_bracket()</code> depend on?" · "Will renaming this break anything?"
+</td>
+</tr>
+<tr>
+<td><b>📖 Skim a file</b></td>
+<td>
+"Symbol map of <code>api_client.py</code>" · "What's in <code>strategies/base.py</code>?"
+</td>
+</tr>
+<tr>
+<td><b>🧠 Remember context</b></td>
+<td>
+"Did I solve this kind of bug before?" · "What approach did we try last week?"
+</td>
+</tr>
+</table>
+
+---
+
+## 🧠 How It Works
+
+```
+┌────────────────────────────────────────────────────────────────┐
+│   1. INDEX   →   tree-sitter parses every .py/.js/.ts          │
+│                    ↓                                           │
+│                 extract symbols (functions, classes, calls)    │
+│                    ↓                                           │
+│                 embed each → 384-dim vector                    │
+│                    ↓                                           │
+│                 store in SQLite (nodes + edges)                │
+├────────────────────────────────────────────────────────────────┤
+│   2. WATCH   →   filesystem watcher → incremental re-index     │
+├────────────────────────────────────────────────────────────────┤
+│   3. QUERY   →   task text → embedding → top-5 seeds           │
+│                    ↓                                           │
+│                 Personalized PageRank → expand to top-25       │
+│                    ↓                                           │
+│                 serialize signatures only → fit token budget   │
+│                    ↓                                           │
+│                 inject into AI assistant via MCP               │
+└────────────────────────────────────────────────────────────────┘
+```
+
+**Stack:**
+- 🌳 **tree-sitter** — AST parsing (Python, JS, TS, JSX, TSX)
+- 🤖 **sentence-transformers** — local embeddings (`all-MiniLM-L6-v2`, 384-dim)
+- 🕸 **NetworkX** — Personalized PageRank over call graph
+- 💾 **SQLite** — knowledge graph storage
+- 🛰 **MCP protocol** — stdio interface for AI assistants
+- 🌐 **FastAPI + D3.js** — real-time dashboard
+
+---
+
+## 📥 Installation
+
+### Option 1 — Claude Code Plugin (Recommended)
+
+<details>
+<summary>Click for steps</summary>
+
+```bash
+# Inside Claude Code:
+# Settings → Manage Plugins → Marketplace → search "astra" → Install
+```
+
+That's it. Plugin runs `install.sh` automatically.
+
+</details>
+
+### Option 2 — pip (Universal: Cursor, Codex, any MCP client)
+
+<details>
+<summary>Click for steps</summary>
+
 ```bash
 pip install astra-mcp
-astra init                        # index current directory
-astra dashboard                   # optional — view the graph
+astra init
 ```
 
-Then add to your AI assistant's MCP config:
+Then add to your MCP client config:
+
 ```json
 {
   "mcpServers": {
@@ -179,101 +365,194 @@ Then add to your AI assistant's MCP config:
 }
 ```
 
-Restart your AI assistant. Done.
+Restart your AI assistant.
+
+</details>
+
+### Option 3 — From Source
+
+<details>
+<summary>Click for steps</summary>
+
+```bash
+git clone https://github.com/satyasaicharan/astra-mcp.git
+cd astra-mcp
+bash install.sh
+```
+
+</details>
 
 ---
 
-## Command Reference
+## 🧰 Command Reference
 
 | Command | Purpose |
 |---|---|
 | `astra init` | Index current project (first-time setup) |
-| `astra reindex` | Force-rebuild index (rarely needed) |
-| `astra status` | Show index health: files, symbols, edges, DB size |
-| `astra search "auth code"` | Quick semantic search from CLI |
-| `astra dashboard` | Launch web dashboard on :7865 |
-| `astra bench "fix login bug"` | Benchmark token savings on a sample task |
-| `astra watch` | Run file watcher in foreground (usually auto-runs) |
+| `astra reindex` | Force-rebuild index |
+| `astra status` | Show index health |
+| `astra search "auth code"` | Quick semantic search |
+| `astra dashboard` | Launch web dashboard on `:7865` |
+| `astra bench "fix login bug"` | Benchmark token savings |
+| `astra watch` | File watcher (auto-runs in background) |
 
 ---
 
-## What Makes ASTra Different
+## 🔐 Privacy & Security
 
-Most "code search" tools do one of these:
-- **Grep / ripgrep** — text match only. No semantic understanding.
-- **GitHub Copilot index** — closed, cloud-based, your code leaves your machine.
-- **Vector DBs (Chroma, Pinecone) with raw embedding** — find similar text, but miss structural relationships.
-- **Tree-sitter alone** — parses syntax, doesn't rank what matters.
+<table>
+<tr>
+<td>✅</td><td><b>Local-first</b> — Code never leaves your machine. SQLite on your disk.</td>
+</tr>
+<tr>
+<td>✅</td><td><b>No telemetry</b> — ASTra doesn't phone home.</td>
+</tr>
+<tr>
+<td>✅</td><td><b>No API keys</b> — Embeddings model runs locally.</td>
+</tr>
+<tr>
+<td>✅</td><td><b>Self-hosted dashboard</b> — Runs on <code>localhost</code> only.</td>
+</tr>
+<tr>
+<td>✅</td><td><b>Open source</b> — MIT licensed. Audit, fork, ship.</td>
+</tr>
+</table>
 
-ASTra combines **all four signals**:
-1. Semantic embeddings (what's the user asking about?)
-2. AST structure (what's syntactically related?)
-3. Call graph (what calls what?)
-4. PageRank scoring (what's actually important in this codebase?)
-
-Result: when you ask "fix the order placement bug," ASTra returns not just functions matching "order" but the *entire blast radius* — callers, validators, fee calculators, retry logic — ranked by relevance.
+Safe for confidential codebases (medical, financial, defense). Nothing leaves the box.
 
 ---
 
-## Frequently Asked Questions
+## 🆚 vs. The Alternatives
 
-**Will this slow down my AI assistant?**
-No. Index queries take 30–100ms. You save 10+ seconds of file-reading per task.
+| Tool | Semantic? | Local? | Structural? | Auto-injects to AI? |
+|---|---|---|---|---|
+| **ASTra** | ✅ | ✅ | ✅ | ✅ |
+| Grep / ripgrep | ❌ | ✅ | ❌ | ❌ |
+| GitHub Copilot index | ✅ | ❌ (cloud) | ❌ | partial |
+| Chroma / Pinecone RAG | ✅ | partial | ❌ | manual |
+| tree-sitter alone | ❌ | ✅ | ✅ | ❌ |
 
-**Does it work on huge codebases?**
-Yes. Tested on 5,000+ file projects. SQLite handles millions of rows fine. Index size is roughly 1–3% of source size.
+ASTra combines **all four signals**: semantic similarity + AST structure + call graph + PageRank importance.
 
-**Languages supported?**
+---
+
+## ❓ Frequently Asked Questions
+
+<details>
+<summary><b>Will this slow down my AI assistant?</b></summary>
+No. Queries take 30–100ms. You save 10+ seconds of file-reading per task.
+</details>
+
+<details>
+<summary><b>Does it work on huge codebases?</b></summary>
+Yes. Tested on 5,000+ file projects. Index size is roughly 1–3% of source.
+</details>
+
+<details>
+<summary><b>Languages supported?</b></summary>
 Python, JavaScript, TypeScript, JSX, TSX today. Go, Rust, Java planned.
+</details>
 
-**What if my code changes constantly?**
-ASTra has a file watcher. Edit a file → index updates in <100ms. No manual rebuild.
+<details>
+<summary><b>What if my code changes constantly?</b></summary>
+ASTra has a file watcher. Edit a file → index updates in &lt;100ms.
+</details>
 
-**Does it work offline?**
-Yes, after first install (embeddings model is downloaded once, ~80MB).
+<details>
+<summary><b>Does it work offline?</b></summary>
+Yes, after first install (embeddings model downloads once, ~80MB).
+</details>
 
-**Can I use it without an AI assistant?**
-Yes. CLI commands (`astra search`, `astra dashboard`) work standalone. Useful for code archaeology in unfamiliar repos.
+<details>
+<summary><b>Can I use it without an AI assistant?</b></summary>
+Yes. CLI works standalone (<code>astra search</code>, <code>astra dashboard</code>).
+</details>
 
-**How is this different from RAG over my codebase?**
-Standard RAG embeds raw text chunks. ASTra embeds *parsed symbols with structural context*. You get function signatures and call graphs, not random text windows. Far higher signal density.
+<details>
+<summary><b>How is this different from RAG?</b></summary>
+Standard RAG embeds raw text chunks. ASTra embeds <i>parsed symbols with structural context</i>. Far higher signal density.
+</details>
 
-**Does ASTra train on my code?**
-No. Nothing is sent anywhere. Embeddings are computed locally and stored in `.astra/graph.db` on your disk.
+<details>
+<summary><b>Does ASTra train on my code?</b></summary>
+No. Nothing sent anywhere. Embeddings computed locally, stored in <code>.astra/graph.db</code>.
+</details>
 
-**Can I delete the index?**
-Yes — `rm -rf .astra`. Rebuild with `astra init`. No persistent state outside that folder.
-
----
-
-## Roadmap
-
-- Go, Rust, Java, C++ parsers
-- VS Code extension (visual graph inline with editor)
-- Team mode: shared index for monorepos via S3/GCS sync
-- IDE annotations: hover any symbol → see PageRank score + caller count
-- Diff-aware indexing: re-rank on PRs to highlight new structural relationships
-
----
-
-## Contributing
-
-PRs welcome. Areas where help is most valuable:
-- Adding language parsers (`astra/indexer/parser.py`)
-- Improving the dashboard UX
-- Benchmarks on more diverse codebases
-- Documentation translations
+<details>
+<summary><b>Can I delete the index?</b></summary>
+Yes — <code>rm -rf .astra</code>. Rebuild with <code>astra init</code>.
+</details>
 
 ---
 
-## License
+## 🗺️ Roadmap
 
-MIT. Use it, fork it, sell it.
+- [ ] Go, Rust, Java, C++ parsers
+- [ ] VS Code extension (graph inline with editor)
+- [ ] Team mode (shared index via S3/GCS)
+- [ ] Hover annotations: PageRank score per symbol
+- [ ] Diff-aware indexing for PR review
+- [ ] Cross-repo monorepo support
+- [ ] HNSW indexing for 100k+ symbol corpora
 
 ---
 
-## Credits
+## 🤝 Contributing
 
-Built by Satya Sai Charan. Inspired by years of watching AI assistants burn money reading the same files over and over.
+PRs welcome. High-value areas:
+- 🌐 New language parsers ([astra/indexer/parser.py](astra/indexer/parser.py))
+- 🎨 Dashboard UX
+- 📊 Benchmarks on diverse codebases
+- 📖 Translations
 
-If ASTra saves you tokens, star the repo.
+---
+
+## 📜 License
+
+<div align="center">
+
+**MIT License**
+
+Copyright (c) 2026 **Narra Satya Sai Charan**
+
+</div>
+
+```
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND.
+```
+
+Full license → [LICENSE](LICENSE)
+
+✅ **You can:** use it, fork it, modify it, sell it, ship it commercially
+❌ **You cannot:** hold the author liable
+📌 **You must:** include the license + copyright notice in distributions
+
+---
+
+## 🙏 Credits
+
+Built by **Narra Satya Sai Charan**.
+
+Inspired by years of watching AI assistants burn money reading the same files over and over.
+
+If ASTra saves you tokens, **star the repo** ⭐ — it helps others find this tool.
+
+---
+
+<div align="center">
+
+**🕸 ASTra MCP** — *Code memory that thinks like an engineer.*
+
+<sub>Made with ☕ + 🧠 + a deep grudge against context window limits.</sub>
+
+</div>
