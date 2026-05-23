@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>ASTra MCP — Interactive Demos</title>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<style>
+  :root{--bg:#0a0a0f;--surface:#16161a;--border:#2a2a35;--text1:#e2e8f0;--text2:#94a3b8;--text3:#64748b;--accent:#7c6af7;--accent2:#5eead4}
+  *{box-sizing:border-box}
+  body{margin:0;background:radial-gradient(ellipse at top,#13131a,#0a0a0f);color:var(--text1);font-family:-apple-system,BlinkMacSystemFont,'SF Mono',Monaco,monospace;min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:40px 20px}
+  h1{font-size:32px;margin:0 0 8px;background:linear-gradient(90deg,#7c6af7,#5eead4);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+  .sub{color:var(--text2);margin-bottom:48px;font-size:14px}
+  .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:20px;max-width:900px;width:100%}
+  .card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:24px;transition:transform .2s,border-color .2s;text-decoration:none;color:inherit;display:block}
+  .card:hover{transform:translateY(-4px);border-color:var(--accent)}
+  .card .ico{font-size:32px;margin-bottom:12px}
+  .card h2{margin:0 0 8px;font-size:18px;color:var(--accent2)}
+  .card p{margin:0;color:var(--text2);font-size:13px;line-height:1.55}
+  .card .arrow{margin-top:14px;color:var(--accent);font-size:12px;font-weight:600}
+  .footer{margin-top:48px;color:var(--text3);font-size:11px}
+  .footer a{color:var(--accent2);text-decoration:none}
+</style>
+</head>
+<body>
+  <h1>🕸 ASTra MCP</h1>
+  <p class="sub">Permanent code memory for AI assistants · 98.9% token reduction</p>
+
+  <div class="grid">
+    <a class="card" href="demo.html">
+      <div class="ico">⚡</div>
+      <h2>Interactive Migration Demo</h2>
+      <p>Drag nodes, click to inspect, watch a function migrate between code clusters with edges re-wiring live.</p>
+      <div class="arrow">Launch demo →</div>
+    </a>
+
+    <a class="card" href="https://github.com/Charan-place/ASTra-MCP">
+      <div class="ico">📦</div>
+      <h2>Source Code</h2>
+      <p>Browse the repo, read architecture docs, install via pip or clone.</p>
+      <div class="arrow">View on GitHub →</div>
+    </a>
+
+    <a class="card" href="https://github.com/Charan-place/ASTra-MCP#-quickstart">
+      <div class="ico">🚀</div>
+      <h2>Quickstart Guide</h2>
+      <p>Three commands: install, index, dashboard. Works with Claude Code, Cursor, Codex.</p>
+      <div class="arrow">Read guide →</div>
+    </a>
+
+    <a class="card" href="https://github.com/Charan-place/ASTra-MCP/blob/main/ARCHITECTURE.md">
+      <div class="ico">🧠</div>
+      <h2>Architecture Deep Dive</h2>
+      <p>Full system design: AST parsing → embeddings → PageRank → snapshot HTML.</p>
+      <div class="arrow">Read docs →</div>
+    </a>
+  </div>
+
+  <div class="footer">
+    Built by <a href="https://github.com/Charan-place">Narra Satya Sai Charan</a> · Apache 2.0 License
+  </div>
+</body>
+</html>

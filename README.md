@@ -122,18 +122,25 @@ ASTra builds a **permanent knowledge graph** of your codebase. Before every AI t
 
 <table>
 <tr>
-<td align="center">
+<td align="center" width="50%">
 
-<a href="docs/demo.html"><b>📂 Download & open <code>docs/demo.html</code></b></a>
+### 🌐 Open in Browser
 
-*(static file — no server needed, runs in any browser)*
+<a href="https://charan-place.github.io/ASTra-MCP/demo.html"><b>charan-place.github.io/ASTra-MCP/demo.html ↗</b></a>
+
+*(Live via GitHub Pages — full D3 interactivity)*
 
 </td>
-<td align="center">
+<td align="center" width="50%">
 
-<a href="https://htmlpreview.github.io/?https://github.com/satyasaicharan/astra-mcp/blob/main/docs/demo.html"><b>🌐 Open Live Preview ↗</b></a>
+### 💻 Run Locally
 
-*(once repo is on GitHub)*
+```bash
+git clone https://github.com/Charan-place/ASTra-MCP
+open ASTra-MCP/docs/demo.html
+```
+
+*(Works offline. No backend.)*
 
 </td>
 </tr>
@@ -415,7 +422,7 @@ Restart your AI assistant.
 <summary>Click for steps</summary>
 
 ```bash
-git clone https://github.com/satyasaicharan/astra-mcp.git
+git clone https://github.com/Charan-place/ASTra-MCP.git
 cd astra-mcp
 bash install.sh
 ```
