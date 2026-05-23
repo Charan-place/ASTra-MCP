@@ -1,0 +1,405 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>ASTra MCP — Interactive Demo</title>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<script src="https://d3js.org/d3.v7.min.js"></script>
+<style>
+  :root {
+    --bg:#0a0a0f; --surface:#16161a; --border:#2a2a35;
+    --text1:#e2e8f0; --text2:#94a3b8; --text3:#64748b;
+    --accent:#7c6af7; --accent2:#5eead4; --hot:#ff3a8c;
+    --warm:#ff7a3a; --soft:#fbbf24;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--text1);font-family:-apple-system,BlinkMacSystemFont,'SF Mono',Monaco,monospace;min-height:100vh;display:flex;flex-direction:column;overflow:hidden}
+  header{padding:14px 24px;border-bottom:1px solid var(--border);background:var(--surface);display:flex;justify-content:space-between;align-items:center;gap:12px}
+  header h1{font-size:15px;margin:0;font-weight:700}
+  header h1 span{color:var(--accent2)}
+  header .meta{font-size:11px;color:var(--text3)}
+  .layout{flex:1;display:flex;min-height:0}
+  aside{width:320px;background:var(--surface);border-right:1px solid var(--border);padding:18px;overflow-y:auto;font-size:12px}
+  aside h2{font-size:10px;text-transform:uppercase;letter-spacing:1.5px;color:var(--text3);margin:0 0 8px}
+  .stat{display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--border);font-size:11px}
+  .stat b{color:var(--accent2)}
+  .legend{display:flex;flex-wrap:wrap;gap:8px;margin:12px 0;font-size:10px}
+  .legend span{display:flex;align-items:center;gap:4px}
+  .legend i{width:10px;height:10px;border-radius:50%;display:inline-block}
+  .controls{margin-top:18px;display:flex;flex-direction:column;gap:8px}
+  .btn{padding:9px 12px;background:var(--accent);color:#fff;border:none;border-radius:6px;font-family:inherit;font-size:12px;cursor:pointer;font-weight:600;transition:opacity .2s}
+  .btn:hover{opacity:.88}
+  .btn.alt{background:transparent;border:1px solid var(--border);color:var(--text2)}
+  .btn.alt:hover{border-color:var(--accent);color:var(--accent)}
+  .narration{margin-top:18px;padding:12px;background:rgba(124,106,247,.08);border:1px solid var(--accent);border-radius:8px;font-size:11px;line-height:1.55;color:var(--text1);min-height:60px}
+  .narration b{color:var(--accent2)}
+  .detail{margin-top:18px;padding:12px;background:#1e1e24;border:1px solid var(--border);border-radius:6px;font-size:11px}
+  .detail .n{color:var(--accent2);font-weight:700;font-size:13px}
+  .detail .s{color:var(--text2);margin-top:4px;font-size:10px;white-space:pre-wrap;word-break:break-all}
+  main{flex:1;position:relative;overflow:hidden;background:radial-gradient(circle at 50% 50%,#13131a 0%,#0a0a0f 100%)}
+  svg{width:100%;height:100%}
+  .grp-label{font-size:10px;fill:var(--text3);text-transform:uppercase;letter-spacing:2px;pointer-events:none}
+  .grp-hull{fill-opacity:.06;stroke-width:1.5;stroke-dasharray:4 4}
+  .nd{font-size:9px;fill:var(--text2);pointer-events:none;text-anchor:middle}
+  .tip{position:absolute;background:var(--surface);border:1px solid var(--border);padding:8px 11px;border-radius:6px;font-size:11px;pointer-events:none;opacity:0;transition:opacity .15s;z-index:9}
+  .tip b{color:var(--accent2)}
+  footer{padding:8px 24px;border-top:1px solid var(--border);background:var(--surface);font-size:10px;color:var(--text3);display:flex;justify-content:space-between}
+</style>
+</head>
+<body>
+
+<header>
+  <h1>🕸 <span>ASTra MCP</span> · Interactive Demo</h1>
+  <div class="meta">Drag nodes · Click to inspect · Watch the migration</div>
+</header>
+
+<div class="layout">
+  <aside>
+    <h2>Scenario</h2>
+    <div class="narration" id="narration">
+      A function called <b>process_payment</b> currently lives in <b>Group A (auth)</b>.
+      Watch what happens when you click <b>Move to Payments</b> — ASTra re-evaluates which group it semantically belongs to and the call graph re-wires in real time.
+    </div>
+
+    <h2 style="margin-top:18px">Controls</h2>
+    <div class="controls">
+      <button class="btn" id="btn-move">⚡ Move <code>process_payment</code> → Payments</button>
+      <button class="btn alt" id="btn-reset">↺ Reset</button>
+      <button class="btn alt" id="btn-shake">🔀 Shake graph</button>
+    </div>
+
+    <h2 style="margin-top:18px">Legend</h2>
+    <div class="legend">
+      <span><i style="background:#a855f7"></i>auth</span>
+      <span><i style="background:#5eead4"></i>payments</span>
+      <span><i style="background:var(--hot)"></i>migrating</span>
+      <span><i style="background:#eab308"></i>shared util</span>
+    </div>
+
+    <h2 style="margin-top:18px">Stats</h2>
+    <div class="stat"><span>Nodes</span><b id="s-nodes">0</b></div>
+    <div class="stat"><span>Edges</span><b id="s-edges">0</b></div>
+    <div class="stat"><span>Auth ↔ Payments</span><b id="s-cross">0</b></div>
+    <div class="stat"><span>Migrations</span><b id="s-mig">0</b></div>
+
+    <div class="detail" id="detail">Click a node to inspect.</div>
+  </aside>
+
+  <main id="canvas">
+    <svg id="g"></svg>
+    <div class="tip" id="tip"></div>
+  </main>
+</div>
+
+<footer>
+  <div>Built with D3.js · No backend, runs in your browser</div>
+  <div>ASTra MCP · Apache 2.0</div>
+</footer>
+
+<script>
+// ── Data ─────────────────────────────────────────────────────────────────
+// Two groups + one migrating node + shared utility
+const GROUPS = {
+  auth:     { color: '#a855f7', label: '📁 Auth',     cx: 0.30, cy: 0.50 },
+  payments: { color: '#5eead4', label: '📁 Payments', cx: 0.70, cy: 0.50 },
+  util:     { color: '#eab308', label: '📁 Utils',    cx: 0.50, cy: 0.18 },
+};
+
+const INITIAL_NODES = [
+  // Auth cluster
+  { id: 'login',           group: 'auth' },
+  { id: 'logout',          group: 'auth' },
+  { id: 'verify_token',    group: 'auth' },
+  { id: 'hash_password',   group: 'auth' },
+  { id: 'check_2fa',       group: 'auth' },
+  { id: 'process_payment', group: 'auth', migrating: true },   // ← will move
+  // Payments cluster
+  { id: 'charge_card',     group: 'payments' },
+  { id: 'refund',          group: 'payments' },
+  { id: 'apply_coupon',    group: 'payments' },
+  { id: 'send_receipt',    group: 'payments' },
+  { id: 'calc_tax',        group: 'payments' },
+  // Shared util
+  { id: 'logger',          group: 'util' },
+  { id: 'format_date',     group: 'util' },
+];
+
+const INITIAL_EDGES = [
+  // Auth internal
+  ['login','verify_token'],['login','hash_password'],['login','check_2fa'],
+  ['verify_token','hash_password'],['logout','verify_token'],
+  // Migrating node currently called from auth
+  ['login','process_payment'],
+  // Payments internal
+  ['charge_card','apply_coupon'],['charge_card','calc_tax'],
+  ['charge_card','send_receipt'],['refund','send_receipt'],
+  // Util usage
+  ['login','logger'],['charge_card','logger'],['refund','logger'],
+  ['send_receipt','format_date'],['hash_password','logger'],
+];
+
+// Edges that appear AFTER migration
+const POST_MIGRATION_EDGES = [
+  ['process_payment','charge_card'],
+  ['process_payment','calc_tax'],
+  ['process_payment','send_receipt'],
+  ['process_payment','logger'],
+];
+
+// State
+let state = {
+  nodes: INITIAL_NODES.map(n => ({...n})),
+  edges: INITIAL_EDGES.map(e => ({source:e[0],target:e[1]})),
+  migrations: 0,
+};
+
+// ── Setup ────────────────────────────────────────────────────────────────
+const canvas = document.getElementById('canvas');
+const svg = d3.select('#g');
+const W = () => canvas.clientWidth;
+const H = () => canvas.clientHeight;
+
+// defs: arrowhead
+svg.append('defs').selectAll('marker')
+  .data(['arrow','arrow-hot'])
+  .join('marker')
+  .attr('id', d => d)
+  .attr('viewBox','0 -5 10 10')
+  .attr('refX', 18).attr('refY', 0)
+  .attr('markerWidth', 5).attr('markerHeight', 5)
+  .attr('orient','auto')
+  .append('path')
+  .attr('d','M0,-5L10,0L0,5')
+  .attr('fill', d => d === 'arrow-hot' ? '#ff3a8c' : '#3a3a4a');
+
+const hullG  = svg.append('g').attr('class','hulls');
+const labelG = svg.append('g').attr('class','grp-labels');
+const linkG  = svg.append('g').attr('class','links');
+const nodeG  = svg.append('g').attr('class','nodes');
+
+let sim;
+
+function render(animateMigration=false, migratingId=null) {
+  const w = W(), h = H();
+
+  // Position group anchors
+  state.nodes.forEach(n => {
+    const g = GROUPS[n.group];
+    if (n.x === undefined) {
+      n.x = g.cx * w + (Math.random()-0.5)*40;
+      n.y = g.cy * h + (Math.random()-0.5)*40;
+    }
+  });
+
+  // ── Links ──
+  const links = linkG.selectAll('line')
+    .data(state.edges, d => `${d.source.id||d.source}-${d.target.id||d.target}`);
+
+  links.exit().transition().duration(400)
+    .attr('stroke-opacity', 0).remove();
+
+  const linksEnter = links.enter().append('line')
+    .attr('stroke', d => {
+      const s = d.source.id || d.source;
+      const t = d.target.id || d.target;
+      return (s === migratingId || t === migratingId) ? '#ff3a8c' : '#2a2a3a';
+    })
+    .attr('stroke-width', 1.2)
+    .attr('stroke-opacity', 0)
+    .attr('marker-end', d => {
+      const s = d.source.id || d.source;
+      const t = d.target.id || d.target;
+      return (s === migratingId || t === migratingId) ? 'url(#arrow-hot)' : 'url(#arrow)';
+    });
+
+  linksEnter.transition().duration(700).attr('stroke-opacity', 0.7);
+  const linkSel = linksEnter.merge(links);
+
+  // ── Nodes ──
+  const nodes = nodeG.selectAll('g.node-g')
+    .data(state.nodes, d => d.id);
+
+  nodes.exit().remove();
+
+  const nodesEnter = nodes.enter().append('g').attr('class','node-g').style('cursor','pointer');
+
+  nodesEnter.append('circle')
+    .attr('r', 0)
+    .attr('fill', d => d.migrating ? '#ff3a8c' : GROUPS[d.group].color)
+    .attr('stroke', d => d.migrating ? '#fff' : GROUPS[d.group].color)
+    .attr('stroke-width', d => d.migrating ? 2 : 1)
+    .attr('fill-opacity', .85);
+
+  nodesEnter.append('text')
+    .attr('class','nd')
+    .attr('dy', 22)
+    .text(d => d.id);
+
+  nodesEnter.select('circle').transition().duration(500).attr('r', d => d.migrating ? 11 : 8);
+
+  const nodeSel = nodesEnter.merge(nodes);
+
+  // Drag
+  nodeSel.call(d3.drag()
+    .on('start', (e,d) => { if(!e.active) sim.alphaTarget(.3).restart(); d.fx=d.x; d.fy=d.y; })
+    .on('drag',  (e,d) => { d.fx=e.x; d.fy=e.y; })
+    .on('end',   (e,d) => { if(!e.active) sim.alphaTarget(0); d.fx=null; d.fy=null; })
+  );
+
+  // Tooltip + click detail
+  const tip = document.getElementById('tip');
+  nodeSel.on('mouseover', (e,d) => {
+    tip.innerHTML = `<b>${d.id}</b><br><span style="color:#94a3b8">${GROUPS[d.group].label}</span>`;
+    tip.style.opacity = 1;
+  }).on('mousemove', e => {
+    const r = canvas.getBoundingClientRect();
+    tip.style.left = (e.clientX - r.left + 14) + 'px';
+    tip.style.top  = (e.clientY - r.top  + 10) + 'px';
+  }).on('mouseout', () => { tip.style.opacity = 0; });
+
+  nodeSel.on('click', (e,d) => {
+    e.stopPropagation();
+    const callers = state.edges.filter(x => (x.target.id||x.target) === d.id)
+                               .map(x => x.source.id || x.source);
+    const callees = state.edges.filter(x => (x.source.id||x.source) === d.id)
+                               .map(x => x.target.id || x.target);
+    document.getElementById('detail').innerHTML = `
+      <div class="n">${d.id}</div>
+      <div class="s">📁 ${GROUPS[d.group].label}</div>
+      <div class="s" style="margin-top:6px;color:#a78bfa">⬆ Called by (${callers.length}): ${callers.join(', ')||'—'}</div>
+      <div class="s" style="color:#5eead4">⬇ Calls (${callees.length}): ${callees.join(', ')||'—'}</div>`;
+  });
+
+  // ── Group hulls + labels ──
+  drawHulls();
+  drawGroupLabels();
+
+  // ── Simulation ──
+  if (sim) sim.stop();
+  sim = d3.forceSimulation(state.nodes)
+    .force('link', d3.forceLink(state.edges).id(d=>d.id).distance(70).strength(.6))
+    .force('charge', d3.forceManyBody().strength(-220))
+    .force('coll', d3.forceCollide().radius(22))
+    .force('group-x', d3.forceX(d => GROUPS[d.group].cx * W()).strength(.18))
+    .force('group-y', d3.forceY(d => GROUPS[d.group].cy * H()).strength(.18));
+
+  sim.on('tick', () => {
+    linkSel
+      .attr('x1', d => d.source.x).attr('y1', d => d.source.y)
+      .attr('x2', d => d.target.x).attr('y2', d => d.target.y);
+    nodeSel.attr('transform', d => `translate(${d.x},${d.y})`);
+    drawHulls();
+    drawGroupLabels();
+  });
+
+  // Stats
+  document.getElementById('s-nodes').textContent = state.nodes.length;
+  document.getElementById('s-edges').textContent = state.edges.length;
+  const cross = state.edges.filter(e => {
+    const s = state.nodes.find(n => n.id === (e.source.id||e.source));
+    const t = state.nodes.find(n => n.id === (e.target.id||e.target));
+    return s && t && s.group !== t.group && s.group !== 'util' && t.group !== 'util';
+  }).length;
+  document.getElementById('s-cross').textContent = cross;
+  document.getElementById('s-mig').textContent = state.migrations;
+}
+
+function drawHulls() {
+  const groups = {};
+  state.nodes.forEach(n => {
+    if (!groups[n.group]) groups[n.group] = [];
+    groups[n.group].push([n.x, n.y]);
+  });
+  const hulls = hullG.selectAll('path.grp-hull')
+    .data(Object.keys(groups), d => d);
+  hulls.enter().append('path').attr('class','grp-hull')
+    .merge(hulls)
+    .attr('fill', g => GROUPS[g].color)
+    .attr('stroke', g => GROUPS[g].color)
+    .attr('d', g => {
+      const pts = groups[g];
+      if (pts.length < 2) return '';
+      // pad points to create a fat hull
+      const padded = [];
+      pts.forEach(p => {
+        padded.push([p[0]-30, p[1]-30]); padded.push([p[0]+30, p[1]-30]);
+        padded.push([p[0]+30, p[1]+30]); padded.push([p[0]-30, p[1]+30]);
+      });
+      const hull = d3.polygonHull(padded);
+      if (!hull) return '';
+      return 'M' + hull.join('L') + 'Z';
+    });
+  hulls.exit().remove();
+}
+
+function drawGroupLabels() {
+  const labels = labelG.selectAll('text.grp-label')
+    .data(Object.keys(GROUPS), d => d);
+  labels.enter().append('text').attr('class','grp-label')
+    .merge(labels)
+    .attr('x', g => GROUPS[g].cx * W())
+    .attr('y', g => GROUPS[g].cy * H() - 80)
+    .attr('fill', g => GROUPS[g].color)
+    .text(g => GROUPS[g].label);
+}
+
+// ── Actions ──────────────────────────────────────────────────────────────
+document.getElementById('btn-move').onclick = () => {
+  const node = state.nodes.find(n => n.id === 'process_payment');
+  if (!node || node.group === 'payments') return;
+  node.migrating = true;
+  node.group = 'payments';
+  state.migrations++;
+
+  // Remove obsolete edges, add new ones
+  state.edges = state.edges.filter(e => {
+    const s = e.source.id || e.source;
+    const t = e.target.id || e.target;
+    return !(s === 'process_payment' && t === 'login') && !(s === 'login' && t === 'process_payment');
+  });
+  POST_MIGRATION_EDGES.forEach(([s,t]) => {
+    if (!state.edges.some(e => (e.source.id||e.source)===s && (e.target.id||e.target)===t)) {
+      state.edges.push({ source: s, target: t });
+    }
+  });
+
+  document.getElementById('narration').innerHTML = `
+    🎬 <b>Migration triggered.</b><br>
+    ASTra detects <b>process_payment</b> now semantically clusters with <b>Payments</b>.
+    Old auth → process_payment edge dies. New edges to <b>charge_card · calc_tax · send_receipt · logger</b> form.<br><br>
+    <i>This is how ASTra adapts in real time when you refactor code.</i>`;
+
+  render(true, 'process_payment');
+  setTimeout(() => {
+    const n = state.nodes.find(x => x.id === 'process_payment');
+    if (n) n.migrating = false;
+    render();
+  }, 2400);
+};
+
+document.getElementById('btn-reset').onclick = () => {
+  state.nodes = INITIAL_NODES.map(n => ({...n}));
+  state.edges = INITIAL_EDGES.map(e => ({source:e[0],target:e[1]}));
+  state.migrations = 0;
+  document.getElementById('narration').innerHTML = `
+    Reset complete. <b>process_payment</b> back in <b>Auth</b>. Click <b>Move</b> to migrate again.`;
+  document.getElementById('detail').innerHTML = 'Click a node to inspect.';
+  render();
+};
+
+document.getElementById('btn-shake').onclick = () => {
+  state.nodes.forEach(n => {
+    n.x += (Math.random()-0.5)*200;
+    n.y += (Math.random()-0.5)*200;
+  });
+  sim.alpha(1).restart();
+};
+
+window.addEventListener('resize', () => render());
+
+// First render
+render();
+</script>
+
+</body>
+</html>

@@ -103,6 +103,46 @@ ASTra builds a **permanent knowledge graph** of your codebase. Before every AI t
 
 ## 🎬 Live Demo
 
+<div align="center">
+
+### 🔥 Watch ASTra Re-Wire Code In Real Time
+
+<img src="docs/astra-migration.svg" alt="ASTra MCP — animated migration demo" width="100%"/>
+
+<sub><i>Animation loops automatically · A function migrates between code clusters, edges re-wire live</i></sub>
+
+<br/><br/>
+
+### 🎮 Try the Fully Interactive Version
+
+| | |
+|---|---|
+| **🖱 Drag nodes** to rearrange | **👆 Click any node** to inspect callers/callees |
+| **⚡ Click "Move"** to trigger live migration | **🔀 Shake** to re-layout the graph |
+
+<table>
+<tr>
+<td align="center">
+
+<a href="docs/demo.html"><b>📂 Download & open <code>docs/demo.html</code></b></a>
+
+*(static file — no server needed, runs in any browser)*
+
+</td>
+<td align="center">
+
+<a href="https://htmlpreview.github.io/?https://github.com/satyasaicharan/astra-mcp/blob/main/docs/demo.html"><b>🌐 Open Live Preview ↗</b></a>
+
+*(once repo is on GitHub)*
+
+</td>
+</tr>
+</table>
+
+</div>
+
+<br/>
+
 <details open>
 <summary><b>🖥️ Knowledge Graph Dashboard</b> — click to expand</summary>
 <br/>

@@ -1,0 +1,144 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 360" width="100%" style="background:#0a0a0f;border-radius:12px;border:1px solid #2a2a35">
+  <defs>
+    <marker id="arr" viewBox="0 -5 10 10" refX="10" refY="0" markerWidth="5" markerHeight="5" orient="auto">
+      <path d="M0,-5L10,0L0,5" fill="#3a3a4a"/>
+    </marker>
+    <marker id="arr-hot" viewBox="0 -5 10 10" refX="10" refY="0" markerWidth="5" markerHeight="5" orient="auto">
+      <path d="M0,-5L10,0L0,5" fill="#ff3a8c"/>
+    </marker>
+    <radialGradient id="bg">
+      <stop offset="0%" stop-color="#13131a"/>
+      <stop offset="100%" stop-color="#0a0a0f"/>
+    </radialGradient>
+  </defs>
+
+  <rect width="800" height="360" fill="url(#bg)"/>
+
+  <!-- Group labels -->
+  <text x="180" y="40" fill="#a855f7" font-family="monospace" font-size="13" font-weight="700" text-anchor="middle">📁 AUTH</text>
+  <text x="620" y="40" fill="#5eead4" font-family="monospace" font-size="13" font-weight="700" text-anchor="middle">📁 PAYMENTS</text>
+
+  <!-- Group bubbles -->
+  <ellipse cx="180" cy="190" rx="135" ry="110" fill="#a855f7" fill-opacity="0.06" stroke="#a855f7" stroke-width="1.5" stroke-dasharray="4 4"/>
+  <ellipse cx="620" cy="190" rx="135" ry="110" fill="#5eead4" fill-opacity="0.06" stroke="#5eead4" stroke-width="1.5" stroke-dasharray="4 4"/>
+
+  <!-- AUTH group nodes (static) -->
+  <g font-family="monospace" font-size="9" fill="#94a3b8">
+    <circle cx="100" cy="140" r="8" fill="#a855f7" fill-opacity="0.85"/>
+    <text x="100" y="160" text-anchor="middle">login</text>
+
+    <circle cx="180" cy="100" r="8" fill="#a855f7" fill-opacity="0.85"/>
+    <text x="180" y="120" text-anchor="middle">verify_token</text>
+
+    <circle cx="260" cy="140" r="8" fill="#a855f7" fill-opacity="0.85"/>
+    <text x="260" y="160" text-anchor="middle">hash_password</text>
+
+    <circle cx="120" cy="240" r="8" fill="#a855f7" fill-opacity="0.85"/>
+    <text x="120" y="260" text-anchor="middle">logout</text>
+
+    <circle cx="240" cy="250" r="8" fill="#a855f7" fill-opacity="0.85"/>
+    <text x="240" y="270" text-anchor="middle">check_2fa</text>
+  </g>
+
+  <!-- PAYMENTS group nodes (static) -->
+  <g font-family="monospace" font-size="9" fill="#94a3b8">
+    <circle cx="540" cy="140" r="8" fill="#5eead4" fill-opacity="0.85"/>
+    <text x="540" y="160" text-anchor="middle">charge_card</text>
+
+    <circle cx="620" cy="100" r="8" fill="#5eead4" fill-opacity="0.85"/>
+    <text x="620" y="120" text-anchor="middle">apply_coupon</text>
+
+    <circle cx="700" cy="140" r="8" fill="#5eead4" fill-opacity="0.85"/>
+    <text x="700" y="160" text-anchor="middle">calc_tax</text>
+
+    <circle cx="560" cy="250" r="8" fill="#5eead4" fill-opacity="0.85"/>
+    <text x="560" y="270" text-anchor="middle">refund</text>
+
+    <circle cx="680" cy="240" r="8" fill="#5eead4" fill-opacity="0.85"/>
+    <text x="680" y="260" text-anchor="middle">send_receipt</text>
+  </g>
+
+  <!-- Auth internal edges (static) -->
+  <g stroke="#2a2a3a" stroke-width="1" fill="none" marker-end="url(#arr)" opacity="0.6">
+    <line x1="108" y1="140" x2="172" y2="105"/>
+    <line x1="188" y1="105" x2="252" y2="140"/>
+    <line x1="108" y1="140" x2="252" y2="140"/>
+    <line x1="120" y1="232" x2="172" y2="108"/>
+    <line x1="232" y1="246" x2="180" y2="108"/>
+  </g>
+
+  <!-- Payments internal edges -->
+  <g stroke="#2a2a3a" stroke-width="1" fill="none" marker-end="url(#arr)" opacity="0.6">
+    <line x1="548" y1="140" x2="612" y2="105"/>
+    <line x1="548" y1="140" x2="692" y2="140"/>
+    <line x1="540" y1="148" x2="560" y2="242"/>
+    <line x1="548" y1="148" x2="672" y2="232"/>
+  </g>
+
+  <!-- OLD edge: login -> process_payment (fades out) -->
+  <line x1="108" y1="140" stroke="#ff3a8c" stroke-width="1.5" marker-end="url(#arr-hot)" opacity="0.8">
+    <animate attributeName="x2" from="195" to="195" dur="6s" repeatCount="indefinite"/>
+    <animate attributeName="y2" from="190" to="190" dur="6s" begin="0s" repeatCount="indefinite"
+             values="190;190;190;190" keyTimes="0;0.5;0.5;1"/>
+    <animate attributeName="opacity" dur="6s" repeatCount="indefinite"
+             values="0.8;0.8;0;0;0;0" keyTimes="0;0.45;0.55;0.7;0.9;1"/>
+  </line>
+
+  <!-- NEW edges (fade in mid-animation) -->
+  <line x1="540" y1="140" y2="190" stroke="#5eead4" stroke-width="1.5" marker-end="url(#arr-hot)" opacity="0">
+    <animate attributeName="x2" from="605" to="605" dur="6s" repeatCount="indefinite"/>
+    <animate attributeName="y2" from="190" to="190" dur="6s" repeatCount="indefinite"/>
+    <animate attributeName="opacity" dur="6s" repeatCount="indefinite"
+             values="0;0;0;0.85;0.85;0.85" keyTimes="0;0.55;0.65;0.75;0.95;1"/>
+  </line>
+  <line x1="700" y1="140" stroke="#5eead4" stroke-width="1.5" marker-end="url(#arr-hot)" opacity="0">
+    <animate attributeName="x2" from="615" to="615" dur="6s" repeatCount="indefinite"/>
+    <animate attributeName="y2" from="190" to="190" dur="6s" repeatCount="indefinite"/>
+    <animate attributeName="opacity" dur="6s" repeatCount="indefinite"
+             values="0;0;0;0.85;0.85;0.85" keyTimes="0;0.6;0.7;0.8;0.95;1"/>
+  </line>
+  <line x1="560" y1="250" stroke="#5eead4" stroke-width="1.5" marker-end="url(#arr-hot)" opacity="0">
+    <animate attributeName="x2" from="610" to="610" dur="6s" repeatCount="indefinite"/>
+    <animate attributeName="y2" from="195" to="195" dur="6s" repeatCount="indefinite"/>
+    <animate attributeName="opacity" dur="6s" repeatCount="indefinite"
+             values="0;0;0;0;0.85;0.85" keyTimes="0;0.65;0.75;0.8;0.9;1"/>
+  </line>
+
+  <!-- THE MIGRATING NODE: process_payment -->
+  <g>
+    <circle r="14" fill="#ff3a8c" fill-opacity="0.25">
+      <animate attributeName="cx" dur="6s" repeatCount="indefinite"
+               values="195;195;195;610;610;610" keyTimes="0;0.2;0.4;0.6;0.8;1"
+               calcMode="spline" keySplines="0 0 1 1; 0 0 1 1; 0.4 0 0.2 1; 0 0 1 1; 0 0 1 1"/>
+      <animate attributeName="cy" dur="6s" repeatCount="indefinite"
+               values="190;190;190;190;190;190"/>
+      <animate attributeName="r" dur="1.6s" repeatCount="indefinite"
+               values="14;22;14"/>
+      <animate attributeName="fill-opacity" dur="1.6s" repeatCount="indefinite"
+               values="0.25;0;0.25"/>
+    </circle>
+    <circle r="11" fill="#ff3a8c" stroke="#fff" stroke-width="2">
+      <animate attributeName="cx" dur="6s" repeatCount="indefinite"
+               values="195;195;195;610;610;610" keyTimes="0;0.2;0.4;0.6;0.8;1"
+               calcMode="spline" keySplines="0 0 1 1; 0 0 1 1; 0.4 0 0.2 1; 0 0 1 1; 0 0 1 1"/>
+      <animate attributeName="cy" dur="6s" repeatCount="indefinite"
+               values="190;190;190;190;190;190"/>
+    </circle>
+    <text fill="#ff3a8c" font-family="monospace" font-size="10" font-weight="700" text-anchor="middle">
+      process_payment
+      <animate attributeName="x" dur="6s" repeatCount="indefinite"
+               values="195;195;195;610;610;610" keyTimes="0;0.2;0.4;0.6;0.8;1"
+               calcMode="spline" keySplines="0 0 1 1; 0 0 1 1; 0.4 0 0.2 1; 0 0 1 1; 0 0 1 1"/>
+      <animate attributeName="y" dur="6s" repeatCount="indefinite"
+               values="215;215;215;215;215;215"/>
+    </text>
+  </g>
+
+  <!-- Caption -->
+  <text x="400" y="335" fill="#64748b" font-family="monospace" font-size="11" text-anchor="middle">
+    🎬 ASTra detects refactor → <tspan fill="#ff3a8c">process_payment</tspan> migrates from auth to payments. Edges re-wire automatically.
+  </text>
+  <text x="400" y="350" fill="#475569" font-family="monospace" font-size="9" text-anchor="middle">
+    Animation loops every 6 seconds — open docs/demo.html for the full interactive version
+  </text>
+</svg>
