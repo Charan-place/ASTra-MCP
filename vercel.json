@@ -3,5 +3,11 @@
   "public": true,
   "cleanUrls": true,
   "trailingSlash": false,
-  "outputDirectory": "docs"
+  "framework": null,
+  "buildCommand": null,
+  "installCommand": null,
+  "outputDirectory": "docs",
+  "rewrites": [
+    { "source": "/", "destination": "/index.html" }
+  ]
 }
