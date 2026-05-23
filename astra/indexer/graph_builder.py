@@ -50,6 +50,12 @@ def _resolve_cross_file_calls(store: GraphStore) -> int:
 def index_codebase(root: Path, store: GraphStore, force: bool = False) -> dict:
     """Parse every source file, embed all symbols, write to store."""
     start = time.time()
+    if force:
+        with store._lock:
+            store.conn.execute("DELETE FROM nodes")
+            store.conn.execute("DELETE FROM edges")
+            store.conn.execute("DELETE FROM file_hashes")
+            store.conn.commit()
     files = list(iter_source_files(root))
     stats = {"files_total": len(files), "files_indexed": 0, "symbols": 0, "skipped": 0}
 
