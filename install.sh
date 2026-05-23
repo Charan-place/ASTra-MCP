@@ -8,7 +8,12 @@ echo "=== ASTra Installer ==="
 echo "Installing Python dependencies..."
 
 # Install ASTra package
-pip3 install -e "$SCRIPT_DIR" --quiet
+# Prefer python3.14 if available (matches plugin.json), fall back to pip3
+if command -v python3.14 &>/dev/null; then
+    python3.14 -m pip install -e "$SCRIPT_DIR" --quiet
+else
+    pip3 install -e "$SCRIPT_DIR" --quiet
+fi
 
 echo "Dependencies installed."
 echo ""

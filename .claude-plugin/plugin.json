@@ -6,12 +6,11 @@
   "license": "MIT",
   "mcpServers": {
     "astra": {
-      "command": "python3",
+      "command": "/Library/Frameworks/Python.framework/Versions/3.14/bin/python3",
       "args": ["-m", "astra.mcp.server"],
       "env": {
         "ASTRA_DATA_DIR": "${workspaceFolder}/.astra",
-        "ASTRA_PROJECT": "${workspaceFolder}",
-        "PYTHONPATH": "${pluginRoot}"
+        "ASTRA_PROJECT": "${workspaceFolder}"
       }
     }
   },
