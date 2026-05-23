@@ -1,0 +1,188 @@
+"""MCP server. Exposes 7 tools to Claude Code, Codex, Cursor via stdio."""
+import asyncio
+import json
+import os
+from pathlib import Path
+
+from mcp.server import Server
+from mcp.server.stdio import stdio_server
+from mcp.types import (
+    Tool,
+    TextContent,
+    CallToolResult,
+    ListToolsResult,
+)
+
+from astra.graph.store import GraphStore
+from astra.memory.session import SessionMemory
+from astra.mcp.tools import (
+    tool_get_context,
+    tool_search,
+    tool_get_callers,
+    tool_get_callees,
+    tool_get_file_map,
+    tool_session_memory,
+    tool_index_status,
+)
+
+_TOOLS = [
+    Tool(
+        name="astra_get_context",
+        description=(
+            "CALL THIS FIRST before any coding task. "
+            "Converts a natural-language task description into the minimal relevant "
+            "code context from the indexed codebase. "
+            "Returns signatures and docstrings only — no full file reads needed. "
+            "Cuts token usage 60-80% vs reading files directly."
+        ),
+        inputSchema={
+            "type": "object",
+            "properties": {
+                "task": {"type": "string", "description": "What you are about to do"},
+                "max_tokens": {"type": "integer", "default": 4000, "description": "Token budget for context"},
+            },
+            "required": ["task"],
+        },
+    ),
+    Tool(
+        name="astra_search",
+        description="Semantic search for functions, classes, or modules by name or meaning.",
+        inputSchema={
+            "type": "object",
+            "properties": {
+                "query": {"type": "string"},
+                "top_k": {"type": "integer", "default": 10},
+            },
+            "required": ["query"],
+        },
+    ),
+    Tool(
+        name="astra_get_callers",
+        description="Find all functions that call a given function. Use before changing a function signature.",
+        inputSchema={
+            "type": "object",
+            "properties": {
+                "function_name": {"type": "string"},
+                "file": {"type": "string", "description": "Optional: narrow to specific file"},
+            },
+            "required": ["function_name"],
+        },
+    ),
+    Tool(
+        name="astra_get_callees",
+        description="Find all functions called by a given function. Use to understand dependencies.",
+        inputSchema={
+            "type": "object",
+            "properties": {
+                "function_name": {"type": "string"},
+                "file": {"type": "string"},
+            },
+            "required": ["function_name"],
+        },
+    ),
+    Tool(
+        name="astra_get_file_map",
+        description="Get all symbols in a file with signatures only. Use before editing a file.",
+        inputSchema={
+            "type": "object",
+            "properties": {
+                "file": {"type": "string", "description": "Absolute or relative file path"},
+            },
+            "required": ["file"],
+        },
+    ),
+    Tool(
+        name="astra_session_memory",
+        description="Recall what was done in past sessions relevant to the current task.",
+        inputSchema={
+            "type": "object",
+            "properties": {
+                "query": {"type": "string", "description": "What you are working on"},
+                "project": {"type": "string", "description": "Project root path"},
+            },
+            "required": ["query", "project"],
+        },
+    ),
+    Tool(
+        name="astra_index_status",
+        description="Check index freshness: how many files, symbols, and edges are indexed.",
+        inputSchema={
+            "type": "object",
+            "properties": {},
+        },
+    ),
+]
+
+
+def _get_store() -> GraphStore:
+    astra_dir = Path(os.environ.get("ASTRA_DATA_DIR", ".astra"))
+    astra_dir.mkdir(exist_ok=True)
+    return GraphStore(astra_dir / "graph.db")
+
+
+def _get_memory(store: GraphStore) -> SessionMemory:
+    astra_dir = Path(store.db_path).parent
+    return SessionMemory(astra_dir / "sessions.db")
+
+
+def _project() -> str:
+    return os.environ.get("ASTRA_PROJECT", str(Path.cwd()))
+
+
+async def run_server():
+    server = Server("astra-mcp")
+    store = _get_store()
+    memory = _get_memory(store)
+    project = _project()
+
+    @server.list_tools()
+    async def list_tools() -> list[Tool]:
+        return _TOOLS
+
+    @server.call_tool()
+    async def call_tool(name: str, arguments: dict) -> list[TextContent]:
+        try:
+            if name == "astra_get_context":
+                result = tool_get_context(store, arguments["task"], arguments.get("max_tokens", 4000))
+                text = json.dumps(result, indent=2)
+
+            elif name == "astra_search":
+                result = tool_search(store, arguments["query"], arguments.get("top_k", 10))
+                text = json.dumps(result, indent=2)
+
+            elif name == "astra_get_callers":
+                result = tool_get_callers(store, arguments["function_name"], arguments.get("file"))
+                text = json.dumps(result, indent=2)
+
+            elif name == "astra_get_callees":
+                result = tool_get_callees(store, arguments["function_name"], arguments.get("file"))
+                text = json.dumps(result, indent=2)
+
+            elif name == "astra_get_file_map":
+                text = tool_get_file_map(store, arguments["file"])
+
+            elif name == "astra_session_memory":
+                text = tool_session_memory(memory, arguments["query"], arguments.get("project", project))
+
+            elif name == "astra_index_status":
+                result = tool_index_status(store)
+                text = json.dumps(result, indent=2)
+
+            else:
+                text = json.dumps({"error": f"Unknown tool: {name}"})
+
+        except Exception as e:
+            text = json.dumps({"error": str(e)})
+
+        return [TextContent(type="text", text=text)]
+
+    async with stdio_server() as (read_stream, write_stream):
+        await server.run(read_stream, write_stream, server.create_initialization_options())
+
+
+def main():
+    asyncio.run(run_server())
+
+
+if __name__ == "__main__":
+    main()

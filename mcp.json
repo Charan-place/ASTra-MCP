@@ -1,0 +1,12 @@
+{
+  "mcpServers": {
+    "astra": {
+      "command": "python",
+      "args": ["-m", "astra.mcp.server"],
+      "env": {
+        "ASTRA_DATA_DIR": ".astra",
+        "ASTRA_PROJECT": "."
+      }
+    }
+  }
+}

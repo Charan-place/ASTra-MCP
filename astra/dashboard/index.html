@@ -1,0 +1,531 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ASTra — Codebase Intelligence</title>
+<style>
+  :root {
+    --bg: #0d0d0f;
+    --surface: #16161a;
+    --surface2: #1e1e24;
+    --border: #2a2a35;
+    --accent: #7c6af7;
+    --accent2: #5eead4;
+    --green: #22c55e;
+    --red: #ef4444;
+    --yellow: #eab308;
+    --text: #e2e8f0;
+    --text2: #94a3b8;
+    --text3: #64748b;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'SF Mono', 'Fira Code', monospace;
+    min-height: 100vh;
+  }
+
+  /* ── Header ── */
+  header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 20px 32px;
+    border-bottom: 1px solid var(--border);
+    background: var(--surface);
+  }
+  .logo {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  .logo-icon {
+    width: 36px; height: 36px;
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    border-radius: 8px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 18px;
+    font-weight: 900;
+    color: white;
+  }
+  .logo-text { font-size: 22px; font-weight: 700; letter-spacing: -0.5px; }
+  .logo-sub { font-size: 12px; color: var(--text3); margin-top: 1px; }
+  .status-dot {
+    width: 8px; height: 8px;
+    background: var(--green);
+    border-radius: 50%;
+    box-shadow: 0 0 8px var(--green);
+    animation: pulse 2s infinite;
+  }
+  .status-label { font-size: 12px; color: var(--text3); display: flex; align-items: center; gap: 8px; }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
+
+  /* ── Layout ── */
+  main { padding: 28px 32px; display: grid; gap: 24px; }
+
+  /* ── Hero metric ── */
+  .hero {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 16px;
+  }
+  .metric-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 24px;
+    position: relative;
+    overflow: hidden;
+  }
+  .metric-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 2px;
+  }
+  .metric-card.accent::before { background: linear-gradient(90deg, var(--accent), var(--accent2)); }
+  .metric-card.green::before  { background: var(--green); }
+  .metric-card.yellow::before { background: var(--yellow); }
+  .metric-label { font-size: 11px; color: var(--text3); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 8px; }
+  .metric-value { font-size: 42px; font-weight: 800; line-height: 1; }
+  .metric-value.accent { color: var(--accent); }
+  .metric-value.green  { color: var(--green); }
+  .metric-value.yellow { color: var(--yellow); }
+  .metric-sub { font-size: 12px; color: var(--text3); margin-top: 6px; }
+
+  /* ── Sections ── */
+  .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
+  .grid3 { display: grid; grid-template-columns: 2fr 1fr; gap: 24px; }
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 20px;
+  }
+  .card-title {
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: var(--text3);
+    margin-bottom: 16px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .card-title .dot { width: 6px; height: 6px; border-radius: 50%; }
+
+  /* ── Token comparison bar ── */
+  .bar-section { margin-bottom: 16px; }
+  .bar-label { display: flex; justify-content: space-between; font-size: 12px; color: var(--text2); margin-bottom: 6px; }
+  .bar-track { height: 10px; background: var(--surface2); border-radius: 99px; overflow: hidden; }
+  .bar-fill { height: 100%; border-radius: 99px; transition: width 1s ease; }
+  .bar-fill.naive { background: var(--red); }
+  .bar-fill.astra { background: linear-gradient(90deg, var(--accent), var(--accent2)); }
+
+  /* ── Query input ── */
+  .query-form { display: flex; gap: 10px; margin-bottom: 20px; }
+  .query-input {
+    flex: 1;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    color: var(--text);
+    font-family: inherit;
+    font-size: 13px;
+    padding: 10px 14px;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+  .query-input:focus { border-color: var(--accent); }
+  .query-btn {
+    background: var(--accent);
+    border: none;
+    border-radius: 8px;
+    color: white;
+    cursor: pointer;
+    font-family: inherit;
+    font-size: 13px;
+    font-weight: 600;
+    padding: 10px 20px;
+    transition: opacity 0.2s;
+  }
+  .query-btn:hover { opacity: 0.85; }
+  .query-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+  /* ── Query history ── */
+  .query-list { display: flex; flex-direction: column; gap: 8px; max-height: 340px; overflow-y: auto; }
+  .query-item {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 12px 14px;
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 8px;
+    align-items: start;
+    transition: border-color 0.2s;
+  }
+  .query-item:hover { border-color: var(--accent); }
+  .query-item.latest { border-color: var(--accent); background: rgba(124,106,247,0.08); }
+  .query-task { font-size: 13px; color: var(--text); }
+  .query-meta { font-size: 11px; color: var(--text3); margin-top: 4px; }
+  .query-badge {
+    background: rgba(34,197,94,0.15);
+    color: var(--green);
+    border-radius: 6px;
+    font-size: 12px;
+    font-weight: 700;
+    padding: 2px 8px;
+    white-space: nowrap;
+  }
+
+  /* ── Graph stats ── */
+  .stat-row { display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-bottom: 1px solid var(--border); }
+  .stat-row:last-child { border-bottom: none; }
+  .stat-key { font-size: 12px; color: var(--text3); }
+  .stat-val { font-size: 14px; font-weight: 600; color: var(--text); }
+
+  /* ── Context output ── */
+  .context-output {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    font-size: 12px;
+    line-height: 1.6;
+    max-height: 320px;
+    overflow-y: auto;
+    padding: 14px;
+    color: var(--accent2);
+    white-space: pre-wrap;
+    word-break: break-all;
+  }
+  .context-placeholder { color: var(--text3); font-style: italic; }
+
+  /* ── Reduction ring ── */
+  .ring-wrap { display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 16px 0; }
+  .ring-label { font-size: 11px; color: var(--text3); text-transform: uppercase; letter-spacing: 1px; margin-top: 12px; }
+  svg.ring { transform: rotate(-90deg); }
+  .ring-bg { fill: none; stroke: var(--surface2); stroke-width: 10; }
+  .ring-fg { fill: none; stroke: url(#ringGrad); stroke-width: 10; stroke-linecap: round; transition: stroke-dashoffset 1s ease; }
+  .ring-text { font-size: 28px; font-weight: 800; fill: var(--green); dominant-baseline: middle; text-anchor: middle; }
+  .ring-sub  { font-size: 11px; fill: var(--text3); dominant-baseline: middle; text-anchor: middle; }
+
+  /* ── Scrollbar ── */
+  ::-webkit-scrollbar { width: 4px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+  /* ── Search ── */
+  .search-results { display: flex; flex-direction: column; gap: 6px; max-height: 280px; overflow-y: auto; }
+  .search-item {
+    background: var(--surface2);
+    border-radius: 6px;
+    padding: 8px 12px;
+    font-size: 12px;
+  }
+  .search-name { color: var(--accent2); font-weight: 600; }
+  .search-meta { color: var(--text3); margin-top: 2px; }
+  .search-sig  { color: var(--text2); margin-top: 2px; font-size: 11px; }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">
+    <div class="logo-icon">A*</div>
+    <div>
+      <div class="logo-text">ASTra</div>
+      <div class="logo-sub">AST-powered codebase memory for AI agents</div>
+    </div>
+  </div>
+  <div class="status-label">
+    <div class="status-dot"></div>
+    MCP Server Active
+  </div>
+</header>
+
+<main>
+
+  <!-- Hero metrics -->
+  <div class="hero">
+    <div class="metric-card accent">
+      <div class="metric-label">Token Reduction</div>
+      <div class="metric-value accent" id="reduction-pct">—</div>
+      <div class="metric-sub">vs naive full-file read</div>
+    </div>
+    <div class="metric-card green">
+      <div class="metric-label">Tokens Saved (session)</div>
+      <div class="metric-value green" id="tokens-saved">0</div>
+      <div class="metric-sub">cumulative this session</div>
+    </div>
+    <div class="metric-card yellow">
+      <div class="metric-label">Symbols Indexed</div>
+      <div class="metric-value yellow" id="symbol-count">0</div>
+      <div class="metric-sub" id="file-count">0 files · 0 edges</div>
+    </div>
+  </div>
+
+  <!-- Token comparison + ring -->
+  <div class="grid3">
+    <div class="card">
+      <div class="card-title"><span class="dot" style="background:var(--accent)"></span>Live Query</div>
+      <div class="query-form">
+        <input class="query-input" id="task-input" placeholder="Describe your coding task…" />
+        <button class="query-btn" id="query-btn" onclick="runQuery()">Run ▶</button>
+      </div>
+      <div class="bar-section">
+        <div class="bar-label">
+          <span>Without ASTra</span>
+          <span id="naive-tok">—</span>
+        </div>
+        <div class="bar-track"><div class="bar-fill naive" id="bar-naive" style="width:100%"></div></div>
+      </div>
+      <div class="bar-section">
+        <div class="bar-label">
+          <span>With ASTra</span>
+          <span id="astra-tok">—</span>
+        </div>
+        <div class="bar-track"><div class="bar-fill astra" id="bar-astra" style="width:0%"></div></div>
+      </div>
+      <div class="context-output" id="context-out"><span class="context-placeholder">Context will appear here after running a query…</span></div>
+    </div>
+
+    <div class="card">
+      <div class="card-title"><span class="dot" style="background:var(--green)"></span>Reduction</div>
+      <div class="ring-wrap">
+        <svg class="ring" width="160" height="160" viewBox="0 0 160 160">
+          <defs>
+            <linearGradient id="ringGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+              <stop offset="0%" stop-color="#7c6af7"/>
+              <stop offset="100%" stop-color="#5eead4"/>
+            </linearGradient>
+          </defs>
+          <circle class="ring-bg" cx="80" cy="80" r="65"/>
+          <circle class="ring-fg" id="ring-fg" cx="80" cy="80" r="65"
+            stroke-dasharray="408.4"
+            stroke-dashoffset="408.4"/>
+          <g transform="rotate(90, 80, 80)">
+            <text class="ring-text" x="80" y="74" id="ring-pct">0%</text>
+            <text class="ring-sub" x="80" y="96">reduction</text>
+          </g>
+        </svg>
+        <div class="ring-label">Token efficiency</div>
+      </div>
+      <div>
+        <div class="stat-row">
+          <span class="stat-key">Queries run</span>
+          <span class="stat-val" id="query-count">0</span>
+        </div>
+        <div class="stat-row">
+          <span class="stat-key">Last latency</span>
+          <span class="stat-val" id="last-latency">—</span>
+        </div>
+        <div class="stat-row">
+          <span class="stat-key">Cost saved est.</span>
+          <span class="stat-val" id="cost-saved">$0.00</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Query history + graph stats + search -->
+  <div class="grid2">
+    <div class="card">
+      <div class="card-title"><span class="dot" style="background:var(--accent)"></span>Query History</div>
+      <div class="query-list" id="query-list">
+        <div style="color:var(--text3);font-size:12px">No queries yet. Run one above.</div>
+      </div>
+    </div>
+
+    <div>
+      <div class="card" style="margin-bottom:16px">
+        <div class="card-title"><span class="dot" style="background:var(--yellow)"></span>Graph Index</div>
+        <div class="stat-row">
+          <span class="stat-key">Nodes (symbols)</span>
+          <span class="stat-val" id="stat-nodes">0</span>
+        </div>
+        <div class="stat-row">
+          <span class="stat-key">Edges (relations)</span>
+          <span class="stat-val" id="stat-edges">0</span>
+        </div>
+        <div class="stat-row">
+          <span class="stat-key">Files indexed</span>
+          <span class="stat-val" id="stat-files">0</span>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title"><span class="dot" style="background:var(--accent2)"></span>Symbol Search</div>
+        <div class="query-form" style="margin-bottom:12px">
+          <input class="query-input" id="search-input" placeholder="Search symbols…" onkeydown="if(event.key==='Enter')runSearch()"/>
+          <button class="query-btn" onclick="runSearch()">Go</button>
+        </div>
+        <div class="search-results" id="search-results">
+          <div style="color:var(--text3);font-size:12px">Search for functions, classes, modules…</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</main>
+
+<script>
+  const API = '';
+
+  // ── SSE stream ──────────────────────────────────────────────────────────
+  const evtSource = new EventSource(`${API}/api/stream`);
+  evtSource.onmessage = (e) => {
+    const d = JSON.parse(e.data);
+    setEl('stat-nodes', fmt(d.nodes));
+    setEl('stat-edges', fmt(d.edges));
+    setEl('stat-files', d.files);
+    setEl('symbol-count', fmt(d.nodes));
+    setEl('file-count', `${d.files} files · ${fmt(d.edges)} edges`);
+    setEl('query-count', d.query_count);
+    setEl('tokens-saved', fmt(d.total_saved));
+    const costSaved = ((d.total_saved || 0) / 1_000_000 * 3).toFixed(4);
+    setEl('cost-saved', `$${costSaved}`);
+    if (d.last_query) updateBars(d.last_query);
+  };
+
+  // ── Initial stats load ──────────────────────────────────────────────────
+  fetch(`${API}/api/stats`).then(r=>r.json()).then(d => {
+    setEl('stat-nodes', fmt(d.graph.nodes));
+    setEl('stat-edges', fmt(d.graph.edges));
+    setEl('stat-files', d.graph.files);
+    setEl('symbol-count', fmt(d.graph.nodes));
+    setEl('file-count', `${d.graph.files} files · ${fmt(d.graph.edges)} edges`);
+    setEl('tokens-saved', fmt(d.total_saved));
+    setEl('query-count', d.queries.length);
+    const naive = d.naive_tokens;
+    document.getElementById('bar-naive').style.width = '100%';
+    setEl('naive-tok', `${fmt(naive)} tokens`);
+    renderHistory(d.queries);
+  });
+
+  // ── Query ───────────────────────────────────────────────────────────────
+  async function runQuery() {
+    const task = document.getElementById('task-input').value.trim();
+    if (!task) return;
+    const btn = document.getElementById('query-btn');
+    btn.disabled = true;
+    btn.textContent = '…';
+    document.getElementById('context-out').innerHTML = '<span class="context-placeholder">Querying graph…</span>';
+
+    try {
+      const res = await fetch(`${API}/api/query`, {
+        method: 'POST',
+        headers: {'Content-Type':'application/json'},
+        body: JSON.stringify({task, max_tokens: 4000}),
+      });
+      const d = await res.json();
+      updateBars(d);
+      document.getElementById('context-out').textContent = d.context || '';
+      prependHistory(d);
+      setEl('last-latency', `${d.latency_ms}ms`);
+      setEl('tokens-saved', fmt(_state.totalSaved + (d.naive_tokens - d.astra_tokens)));
+      _state.totalSaved += (d.naive_tokens - d.astra_tokens);
+    } finally {
+      btn.disabled = false;
+      btn.textContent = 'Run ▶';
+    }
+  }
+
+  document.getElementById('task-input').addEventListener('keydown', e => {
+    if (e.key === 'Enter') runQuery();
+  });
+
+  // ── Search ──────────────────────────────────────────────────────────────
+  async function runSearch() {
+    const q = document.getElementById('search-input').value.trim();
+    if (!q) return;
+    const res = await fetch(`${API}/api/search?q=${encodeURIComponent(q)}&k=8`);
+    const results = await res.json();
+    const el = document.getElementById('search-results');
+    if (!results.length) {
+      el.innerHTML = '<div style="color:var(--text3);font-size:12px">No symbols found.</div>';
+      return;
+    }
+    el.innerHTML = results.map(r => `
+      <div class="search-item">
+        <div class="search-name">${r.name}</div>
+        <div class="search-meta">${r.type} · score ${r.score}</div>
+        <div class="search-sig">${(r.signature||'').slice(0,80)}</div>
+        <div class="search-meta">${r.file.split('/').slice(-2).join('/')}:${r.line_start}</div>
+      </div>`).join('');
+  }
+
+  // ── Helpers ─────────────────────────────────────────────────────────────
+  const _state = { totalSaved: 0, queryCount: 0 };
+
+  function updateBars(d) {
+    const naive = d.naive_tokens;
+    const astra = d.astra_tokens;
+    const pct = d.reduction_pct || Math.round((1 - astra/Math.max(naive,1))*100);
+    setEl('naive-tok', `${fmt(naive)} tokens`);
+    setEl('astra-tok', `${fmt(astra)} tokens`);
+    setEl('reduction-pct', `${pct}%`);
+
+    // bars: astra as % of naive
+    const astraW = Math.max(2, Math.round((astra/Math.max(naive,1))*100));
+    document.getElementById('bar-astra').style.width = astraW + '%';
+    document.getElementById('bar-naive').style.width = '100%';
+
+    // ring: circumference = 2πr = 408.4 for r=65
+    const circumference = 408.4;
+    const offset = circumference * (1 - pct/100);
+    document.getElementById('ring-fg').style.strokeDashoffset = offset;
+    setEl('ring-pct', `${pct}%`);
+  }
+
+  function prependHistory(d) {
+    _state.queryCount++;
+    setEl('query-count', _state.queryCount);
+    const list = document.getElementById('query-list');
+    const existing = list.querySelector('.query-item.latest');
+    if (existing) existing.classList.remove('latest');
+    const noItems = list.querySelector('div:not(.query-item)');
+    if (noItems) list.innerHTML = '';
+
+    const item = document.createElement('div');
+    item.className = 'query-item latest';
+    item.innerHTML = `
+      <div>
+        <div class="query-task">${d.task}</div>
+        <div class="query-meta">${fmt(d.naive_tokens)} → ${fmt(d.astra_tokens)} tokens · ${d.latency_ms}ms · ${d.symbols} symbols</div>
+      </div>
+      <div class="query-badge">${d.reduction_pct}% saved</div>`;
+    list.prepend(item);
+  }
+
+  function renderHistory(queries) {
+    if (!queries || !queries.length) return;
+    const list = document.getElementById('query-list');
+    list.innerHTML = '';
+    [...queries].reverse().forEach((d, i) => {
+      const pct = d.reduction_pct || Math.round((1-d.astra_tokens/Math.max(d.naive_tokens,1))*100);
+      const item = document.createElement('div');
+      item.className = 'query-item' + (i===0?' latest':'');
+      item.innerHTML = `
+        <div>
+          <div class="query-task">${d.task}</div>
+          <div class="query-meta">${fmt(d.naive_tokens)} → ${fmt(d.astra_tokens)} tokens · ${d.latency_ms}ms</div>
+        </div>
+        <div class="query-badge">${pct}% saved</div>`;
+      list.appendChild(item);
+    });
+  }
+
+  function setEl(id, val) {
+    const el = document.getElementById(id);
+    if (el) el.textContent = val;
+  }
+  function fmt(n) {
+    if (!n && n !== 0) return '0';
+    return Number(n).toLocaleString();
+  }
+</script>
+</body>
+</html>
