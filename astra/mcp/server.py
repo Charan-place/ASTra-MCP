@@ -211,7 +211,25 @@ async def run_server():
 
 
 def main():
-    asyncio.run(run_server())
+    """Entry point. Crash log writes to ~/.astra-mcp/crash.log for diagnostics."""
+    import sys, traceback
+    try:
+        asyncio.run(run_server())
+    except Exception as e:
+        try:
+            log_dir = Path.home() / ".astra-mcp"
+            log_dir.mkdir(exist_ok=True)
+            log = log_dir / "crash.log"
+            with log.open("a") as f:
+                f.write(f"\n=== CRASH {os.environ.get('USER','?')} {sys.version} ===\n")
+                f.write(f"argv: {sys.argv}\n")
+                f.write(f"cwd: {os.getcwd()}\n")
+                f.write(f"err: {e}\n")
+                f.write(traceback.format_exc())
+            sys.stderr.write(f"\n[ASTra crashed] See {log} for details.\n")
+        except Exception:
+            sys.stderr.write(f"[ASTra crashed] {e}\n{traceback.format_exc()}\n")
+        sys.exit(1)
 
 
 if __name__ == "__main__":
