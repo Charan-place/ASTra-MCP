@@ -2,7 +2,7 @@
   "name": "astra",
   "version": "0.1.0",
   "description": "AST-powered codebase memory for AI agents. Cuts token usage 93% by injecting only relevant code context via knowledge graph + PageRank.",
-  "author": "Satya Sai Charan",
+  "author": { "name": "Satya Sai Charan" },
   "license": "MIT",
   "mcpServers": {
     "astra": {
