@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>ASTra — Codebase Intelligence</title>
+<script src="https://d3js.org/d3.v7.min.js"></script>
 <style>
   :root {
     --bg: #0d0d0f;
@@ -15,76 +16,39 @@
     --green: #22c55e;
     --red: #ef4444;
     --yellow: #eab308;
+    --orange: #f97316;
     --text: #e2e8f0;
     --text2: #94a3b8;
     --text3: #64748b;
   }
   * { box-sizing: border-box; margin: 0; padding: 0; }
-  body {
-    background: var(--bg);
-    color: var(--text);
-    font-family: 'SF Mono', 'Fira Code', monospace;
-    min-height: 100vh;
-  }
+  body { background: var(--bg); color: var(--text); font-family: 'SF Mono', 'Fira Code', monospace; min-height: 100vh; }
 
   /* ── Header ── */
-  header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 20px 32px;
-    border-bottom: 1px solid var(--border);
-    background: var(--surface);
-  }
-  .logo {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-  }
-  .logo-icon {
-    width: 36px; height: 36px;
-    background: linear-gradient(135deg, var(--accent), var(--accent2));
-    border-radius: 8px;
-    display: flex; align-items: center; justify-content: center;
-    font-size: 18px;
-    font-weight: 900;
-    color: white;
-  }
+  header { display: flex; align-items: center; justify-content: space-between; padding: 16px 32px; border-bottom: 1px solid var(--border); background: var(--surface); }
+  .logo { display: flex; align-items: center; gap: 12px; }
+  .logo-icon { width: 36px; height: 36px; background: linear-gradient(135deg, var(--accent), var(--accent2)); border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 18px; font-weight: 900; color: white; }
   .logo-text { font-size: 22px; font-weight: 700; letter-spacing: -0.5px; }
   .logo-sub { font-size: 12px; color: var(--text3); margin-top: 1px; }
-  .status-dot {
-    width: 8px; height: 8px;
-    background: var(--green);
-    border-radius: 50%;
-    box-shadow: 0 0 8px var(--green);
-    animation: pulse 2s infinite;
-  }
+  .status-dot { width: 8px; height: 8px; background: var(--green); border-radius: 50%; box-shadow: 0 0 8px var(--green); animation: pulse 2s infinite; }
   .status-label { font-size: 12px; color: var(--text3); display: flex; align-items: center; gap: 8px; }
   @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
+
+  /* ── Tabs ── */
+  .tabs { display: flex; gap: 0; border-bottom: 1px solid var(--border); background: var(--surface); padding: 0 32px; }
+  .tab { padding: 12px 20px; font-size: 13px; font-weight: 600; color: var(--text3); cursor: pointer; border-bottom: 2px solid transparent; margin-bottom: -1px; transition: color 0.2s, border-color 0.2s; user-select: none; }
+  .tab:hover { color: var(--text2); }
+  .tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+  .tab-content { display: none; }
+  .tab-content.active { display: block; }
 
   /* ── Layout ── */
   main { padding: 28px 32px; display: grid; gap: 24px; }
 
   /* ── Hero metric ── */
-  .hero {
-    display: grid;
-    grid-template-columns: 1fr 1fr 1fr;
-    gap: 16px;
-  }
-  .metric-card {
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: 12px;
-    padding: 24px;
-    position: relative;
-    overflow: hidden;
-  }
-  .metric-card::before {
-    content: '';
-    position: absolute;
-    top: 0; left: 0; right: 0;
-    height: 2px;
-  }
+  .hero { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; }
+  .metric-card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 24px; position: relative; overflow: hidden; }
+  .metric-card::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px; }
   .metric-card.accent::before { background: linear-gradient(90deg, var(--accent), var(--accent2)); }
   .metric-card.green::before  { background: var(--green); }
   .metric-card.yellow::before { background: var(--yellow); }
@@ -98,22 +62,8 @@
   /* ── Sections ── */
   .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
   .grid3 { display: grid; grid-template-columns: 2fr 1fr; gap: 24px; }
-  .card {
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: 12px;
-    padding: 20px;
-  }
-  .card-title {
-    font-size: 12px;
-    text-transform: uppercase;
-    letter-spacing: 1px;
-    color: var(--text3);
-    margin-bottom: 16px;
-    display: flex;
-    align-items: center;
-    gap: 8px;
-  }
+  .card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 20px; }
+  .card-title { font-size: 12px; text-transform: uppercase; letter-spacing: 1px; color: var(--text3); margin-bottom: 16px; display: flex; align-items: center; gap: 8px; }
   .card-title .dot { width: 6px; height: 6px; border-radius: 50%; }
 
   /* ── Token comparison bar ── */
@@ -126,60 +76,21 @@
 
   /* ── Query input ── */
   .query-form { display: flex; gap: 10px; margin-bottom: 20px; }
-  .query-input {
-    flex: 1;
-    background: var(--surface2);
-    border: 1px solid var(--border);
-    border-radius: 8px;
-    color: var(--text);
-    font-family: inherit;
-    font-size: 13px;
-    padding: 10px 14px;
-    outline: none;
-    transition: border-color 0.2s;
-  }
+  .query-input { flex: 1; background: var(--surface2); border: 1px solid var(--border); border-radius: 8px; color: var(--text); font-family: inherit; font-size: 13px; padding: 10px 14px; outline: none; transition: border-color 0.2s; }
   .query-input:focus { border-color: var(--accent); }
-  .query-btn {
-    background: var(--accent);
-    border: none;
-    border-radius: 8px;
-    color: white;
-    cursor: pointer;
-    font-family: inherit;
-    font-size: 13px;
-    font-weight: 600;
-    padding: 10px 20px;
-    transition: opacity 0.2s;
-  }
+  .query-btn { background: var(--accent); border: none; border-radius: 8px; color: white; cursor: pointer; font-family: inherit; font-size: 13px; font-weight: 600; padding: 10px 20px; transition: opacity 0.2s; }
   .query-btn:hover { opacity: 0.85; }
   .query-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+  .query-btn.secondary { background: var(--surface2); border: 1px solid var(--border); color: var(--text2); }
 
   /* ── Query history ── */
   .query-list { display: flex; flex-direction: column; gap: 8px; max-height: 340px; overflow-y: auto; }
-  .query-item {
-    background: var(--surface2);
-    border: 1px solid var(--border);
-    border-radius: 8px;
-    padding: 12px 14px;
-    display: grid;
-    grid-template-columns: 1fr auto;
-    gap: 8px;
-    align-items: start;
-    transition: border-color 0.2s;
-  }
+  .query-item { background: var(--surface2); border: 1px solid var(--border); border-radius: 8px; padding: 12px 14px; display: grid; grid-template-columns: 1fr auto; gap: 8px; align-items: start; transition: border-color 0.2s; }
   .query-item:hover { border-color: var(--accent); }
   .query-item.latest { border-color: var(--accent); background: rgba(124,106,247,0.08); }
   .query-task { font-size: 13px; color: var(--text); }
   .query-meta { font-size: 11px; color: var(--text3); margin-top: 4px; }
-  .query-badge {
-    background: rgba(34,197,94,0.15);
-    color: var(--green);
-    border-radius: 6px;
-    font-size: 12px;
-    font-weight: 700;
-    padding: 2px 8px;
-    white-space: nowrap;
-  }
+  .query-badge { background: rgba(34,197,94,0.15); color: var(--green); border-radius: 6px; font-size: 12px; font-weight: 700; padding: 2px 8px; white-space: nowrap; }
 
   /* ── Graph stats ── */
   .stat-row { display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-bottom: 1px solid var(--border); }
@@ -188,19 +99,7 @@
   .stat-val { font-size: 14px; font-weight: 600; color: var(--text); }
 
   /* ── Context output ── */
-  .context-output {
-    background: var(--surface2);
-    border: 1px solid var(--border);
-    border-radius: 8px;
-    font-size: 12px;
-    line-height: 1.6;
-    max-height: 320px;
-    overflow-y: auto;
-    padding: 14px;
-    color: var(--accent2);
-    white-space: pre-wrap;
-    word-break: break-all;
-  }
+  .context-output { background: var(--surface2); border: 1px solid var(--border); border-radius: 8px; font-size: 12px; line-height: 1.6; max-height: 320px; overflow-y: auto; padding: 14px; color: var(--accent2); white-space: pre-wrap; word-break: break-all; }
   .context-placeholder { color: var(--text3); font-style: italic; }
 
   /* ── Reduction ring ── */
@@ -219,15 +118,78 @@
 
   /* ── Search ── */
   .search-results { display: flex; flex-direction: column; gap: 6px; max-height: 280px; overflow-y: auto; }
-  .search-item {
-    background: var(--surface2);
-    border-radius: 6px;
-    padding: 8px 12px;
-    font-size: 12px;
-  }
+  .search-item { background: var(--surface2); border-radius: 6px; padding: 8px 12px; font-size: 12px; }
   .search-name { color: var(--accent2); font-weight: 600; }
   .search-meta { color: var(--text3); margin-top: 2px; }
   .search-sig  { color: var(--text2); margin-top: 2px; font-size: 11px; }
+
+  /* ── Graph Explorer ── */
+  #graph-view { display: flex; height: calc(100vh - 120px); gap: 0; }
+
+  /* sidebar */
+  #graph-sidebar {
+    width: 320px;
+    min-width: 260px;
+    background: var(--surface);
+    border-right: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+  #graph-sidebar-inner { padding: 16px; flex: 1; overflow-y: auto; }
+  .sidebar-title { font-size: 11px; text-transform: uppercase; letter-spacing: 1px; color: var(--text3); margin-bottom: 12px; }
+  .filter-row { display: flex; gap: 8px; margin-bottom: 12px; }
+  .filter-input { flex: 1; background: var(--surface2); border: 1px solid var(--border); border-radius: 6px; color: var(--text); font-family: inherit; font-size: 12px; padding: 7px 10px; outline: none; }
+  .filter-input:focus { border-color: var(--accent); }
+
+  /* legend */
+  .legend { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 16px; }
+  .legend-item { display: flex; align-items: center; gap: 5px; font-size: 11px; color: var(--text2); }
+  .legend-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+
+  /* node detail panel */
+  #node-detail { padding: 0; }
+  .detail-empty { font-size: 12px; color: var(--text3); font-style: italic; padding: 8px 0; }
+  .detail-name { font-size: 16px; font-weight: 700; color: var(--text); margin-bottom: 4px; }
+  .detail-type { font-size: 11px; padding: 2px 8px; border-radius: 4px; font-weight: 600; display: inline-block; margin-bottom: 10px; }
+  .detail-type.file     { background: rgba(234,179,8,0.15);   color: var(--yellow); }
+  .detail-type.class    { background: rgba(249,115,22,0.15);  color: var(--orange); }
+  .detail-type.function { background: rgba(94,234,212,0.15);  color: var(--accent2); }
+  .detail-sig { font-size: 11px; color: var(--accent2); background: var(--surface2); border-radius: 6px; padding: 8px 10px; margin-bottom: 10px; white-space: pre-wrap; word-break: break-all; line-height: 1.5; }
+  .detail-file { font-size: 11px; color: var(--text3); margin-bottom: 12px; }
+  .detail-section { font-size: 11px; text-transform: uppercase; letter-spacing: 1px; color: var(--text3); margin: 12px 0 6px; }
+  .detail-node-list { display: flex; flex-direction: column; gap: 4px; }
+  .detail-node-item { background: var(--surface2); border-radius: 5px; padding: 6px 8px; font-size: 11px; cursor: pointer; border: 1px solid transparent; transition: border-color 0.15s; }
+  .detail-node-item:hover { border-color: var(--accent); }
+  .detail-node-item .n-name { color: var(--accent2); font-weight: 600; }
+  .detail-node-item .n-meta { color: var(--text3); margin-top: 2px; }
+
+  /* graph canvas */
+  #graph-canvas { flex: 1; position: relative; overflow: hidden; background: var(--bg); }
+  #graph-svg { width: 100%; height: 100%; }
+  .graph-controls { position: absolute; bottom: 16px; right: 16px; display: flex; gap: 8px; }
+  .ctrl-btn { background: var(--surface); border: 1px solid var(--border); border-radius: 6px; color: var(--text2); cursor: pointer; font-size: 16px; width: 34px; height: 34px; display: flex; align-items: center; justify-content: center; transition: border-color 0.2s; }
+  .ctrl-btn:hover { border-color: var(--accent); color: var(--accent); }
+  .graph-overlay { position: absolute; top: 16px; left: 16px; font-size: 12px; color: var(--text3); pointer-events: none; }
+  .graph-loading { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-size: 14px; color: var(--text3); }
+
+  /* node tooltip */
+  .g-tooltip {
+    position: absolute;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 8px 10px;
+    font-size: 11px;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.15s;
+    max-width: 240px;
+    z-index: 10;
+  }
+  .g-tooltip.visible { opacity: 1; }
+  .g-tooltip .t-name { font-weight: 700; color: var(--text); margin-bottom: 3px; }
+  .g-tooltip .t-meta { color: var(--text3); }
 </style>
 </head>
 <body>
@@ -246,9 +208,15 @@
   </div>
 </header>
 
+<div class="tabs">
+  <div class="tab active" onclick="switchTab('dashboard', this)">📊 Dashboard</div>
+  <div class="tab" onclick="switchTab('graph', this)">🕸 Knowledge Graph</div>
+</div>
+
+<!-- ═══════════════════════════ DASHBOARD TAB ═══════════════════════════ -->
+<div id="tab-dashboard" class="tab-content active">
 <main>
 
-  <!-- Hero metrics -->
   <div class="hero">
     <div class="metric-card accent">
       <div class="metric-label">Token Reduction</div>
@@ -267,7 +235,6 @@
     </div>
   </div>
 
-  <!-- Token comparison + ring -->
   <div class="grid3">
     <div class="card">
       <div class="card-title"><span class="dot" style="background:var(--accent)"></span>Live Query</div>
@@ -276,17 +243,11 @@
         <button class="query-btn" id="query-btn" onclick="runQuery()">Run ▶</button>
       </div>
       <div class="bar-section">
-        <div class="bar-label">
-          <span>Without ASTra</span>
-          <span id="naive-tok">—</span>
-        </div>
+        <div class="bar-label"><span>Without ASTra</span><span id="naive-tok">—</span></div>
         <div class="bar-track"><div class="bar-fill naive" id="bar-naive" style="width:100%"></div></div>
       </div>
       <div class="bar-section">
-        <div class="bar-label">
-          <span>With ASTra</span>
-          <span id="astra-tok">—</span>
-        </div>
+        <div class="bar-label"><span>With ASTra</span><span id="astra-tok">—</span></div>
         <div class="bar-track"><div class="bar-fill astra" id="bar-astra" style="width:0%"></div></div>
       </div>
       <div class="context-output" id="context-out"><span class="context-placeholder">Context will appear here after running a query…</span></div>
@@ -303,9 +264,7 @@
             </linearGradient>
           </defs>
           <circle class="ring-bg" cx="80" cy="80" r="65"/>
-          <circle class="ring-fg" id="ring-fg" cx="80" cy="80" r="65"
-            stroke-dasharray="408.4"
-            stroke-dashoffset="408.4"/>
+          <circle class="ring-fg" id="ring-fg" cx="80" cy="80" r="65" stroke-dasharray="408.4" stroke-dashoffset="408.4"/>
           <g transform="rotate(90, 80, 80)">
             <text class="ring-text" x="80" y="74" id="ring-pct">0%</text>
             <text class="ring-sub" x="80" y="96">reduction</text>
@@ -314,23 +273,13 @@
         <div class="ring-label">Token efficiency</div>
       </div>
       <div>
-        <div class="stat-row">
-          <span class="stat-key">Queries run</span>
-          <span class="stat-val" id="query-count">0</span>
-        </div>
-        <div class="stat-row">
-          <span class="stat-key">Last latency</span>
-          <span class="stat-val" id="last-latency">—</span>
-        </div>
-        <div class="stat-row">
-          <span class="stat-key">Cost saved est.</span>
-          <span class="stat-val" id="cost-saved">$0.00</span>
-        </div>
+        <div class="stat-row"><span class="stat-key">Queries run</span><span class="stat-val" id="query-count">0</span></div>
+        <div class="stat-row"><span class="stat-key">Last latency</span><span class="stat-val" id="last-latency">—</span></div>
+        <div class="stat-row"><span class="stat-key">Cost saved est.</span><span class="stat-val" id="cost-saved">$0.00</span></div>
       </div>
     </div>
   </div>
 
-  <!-- Query history + graph stats + search -->
   <div class="grid2">
     <div class="card">
       <div class="card-title"><span class="dot" style="background:var(--accent)"></span>Query History</div>
@@ -342,20 +291,10 @@
     <div>
       <div class="card" style="margin-bottom:16px">
         <div class="card-title"><span class="dot" style="background:var(--yellow)"></span>Graph Index</div>
-        <div class="stat-row">
-          <span class="stat-key">Nodes (symbols)</span>
-          <span class="stat-val" id="stat-nodes">0</span>
-        </div>
-        <div class="stat-row">
-          <span class="stat-key">Edges (relations)</span>
-          <span class="stat-val" id="stat-edges">0</span>
-        </div>
-        <div class="stat-row">
-          <span class="stat-key">Files indexed</span>
-          <span class="stat-val" id="stat-files">0</span>
-        </div>
+        <div class="stat-row"><span class="stat-key">Nodes (symbols)</span><span class="stat-val" id="stat-nodes">0</span></div>
+        <div class="stat-row"><span class="stat-key">Edges (relations)</span><span class="stat-val" id="stat-edges">0</span></div>
+        <div class="stat-row"><span class="stat-key">Files indexed</span><span class="stat-val" id="stat-files">0</span></div>
       </div>
-
       <div class="card">
         <div class="card-title"><span class="dot" style="background:var(--accent2)"></span>Symbol Search</div>
         <div class="query-form" style="margin-bottom:12px">
@@ -370,162 +309,520 @@
   </div>
 
 </main>
+</div>
+
+<!-- ═══════════════════════════ GRAPH TAB ═══════════════════════════ -->
+<div id="tab-graph" class="tab-content">
+<div id="graph-view">
+
+  <!-- Sidebar -->
+  <div id="graph-sidebar">
+    <div id="graph-sidebar-inner">
+      <div class="sidebar-title">Knowledge Graph</div>
+
+      <div class="filter-row">
+        <input class="filter-input" id="graph-filter" placeholder="Filter by file or name…" oninput="applyGraphFilter()" />
+        <button class="query-btn secondary" style="padding:7px 12px;font-size:12px" onclick="resetGraph()">Reset</button>
+      </div>
+
+      <div class="legend">
+        <div class="legend-item"><div class="legend-dot" style="background:#eab308"></div>file</div>
+        <div class="legend-item"><div class="legend-dot" style="background:#f97316"></div>class</div>
+        <div class="legend-item"><div class="legend-dot" style="background:#5eead4"></div>function</div>
+      </div>
+
+      <div style="margin-bottom:16px">
+        <div class="stat-row"><span class="stat-key">Nodes shown</span><span class="stat-val" id="g-node-count">—</span></div>
+        <div class="stat-row"><span class="stat-key">Edges shown</span><span class="stat-val" id="g-edge-count">—</span></div>
+      </div>
+
+      <!-- Node detail -->
+      <div id="node-detail">
+        <div class="detail-empty">Click any node to explore its connections.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Canvas -->
+  <div id="graph-canvas">
+    <div class="graph-loading" id="graph-loading">Loading graph…</div>
+    <svg id="graph-svg"></svg>
+    <div class="graph-overlay" id="graph-overlay"></div>
+    <div class="g-tooltip" id="g-tooltip"></div>
+    <div class="graph-controls">
+      <button class="ctrl-btn" title="Zoom in"  onclick="graphZoom(1.3)">+</button>
+      <button class="ctrl-btn" title="Zoom out" onclick="graphZoom(0.77)">−</button>
+      <button class="ctrl-btn" title="Fit"      onclick="graphFit()">⊙</button>
+    </div>
+  </div>
+
+</div>
+</div>
 
 <script>
-  const API = '';
+// ═══════════════════════════════════════════════════════ TABS
+function switchTab(name, el) {
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+  el.classList.add('active');
+  document.getElementById('tab-' + name).classList.add('active');
+  if (name === 'graph' && !_graph.loaded) loadGraph();
+}
 
-  // ── SSE stream ──────────────────────────────────────────────────────────
-  const evtSource = new EventSource(`${API}/api/stream`);
-  evtSource.onmessage = (e) => {
-    const d = JSON.parse(e.data);
-    setEl('stat-nodes', fmt(d.nodes));
-    setEl('stat-edges', fmt(d.edges));
-    setEl('stat-files', d.files);
-    setEl('symbol-count', fmt(d.nodes));
-    setEl('file-count', `${d.files} files · ${fmt(d.edges)} edges`);
-    setEl('query-count', d.query_count);
-    setEl('tokens-saved', fmt(d.total_saved));
-    const costSaved = ((d.total_saved || 0) / 1_000_000 * 3).toFixed(4);
-    setEl('cost-saved', `$${costSaved}`);
-    if (d.last_query) updateBars(d.last_query);
-  };
+// ═══════════════════════════════════════════════════════ DASHBOARD
+const API = '';
+const _state = { totalSaved: 0, queryCount: 0 };
 
-  // ── Initial stats load ──────────────────────────────────────────────────
-  fetch(`${API}/api/stats`).then(r=>r.json()).then(d => {
-    setEl('stat-nodes', fmt(d.graph.nodes));
-    setEl('stat-edges', fmt(d.graph.edges));
-    setEl('stat-files', d.graph.files);
-    setEl('symbol-count', fmt(d.graph.nodes));
-    setEl('file-count', `${d.graph.files} files · ${fmt(d.graph.edges)} edges`);
-    setEl('tokens-saved', fmt(d.total_saved));
-    setEl('query-count', d.queries.length);
-    const naive = d.naive_tokens;
-    document.getElementById('bar-naive').style.width = '100%';
-    setEl('naive-tok', `${fmt(naive)} tokens`);
-    renderHistory(d.queries);
-  });
-
-  // ── Query ───────────────────────────────────────────────────────────────
-  async function runQuery() {
-    const task = document.getElementById('task-input').value.trim();
-    if (!task) return;
-    const btn = document.getElementById('query-btn');
-    btn.disabled = true;
-    btn.textContent = '…';
-    document.getElementById('context-out').innerHTML = '<span class="context-placeholder">Querying graph…</span>';
-
-    try {
-      const res = await fetch(`${API}/api/query`, {
-        method: 'POST',
-        headers: {'Content-Type':'application/json'},
-        body: JSON.stringify({task, max_tokens: 4000}),
-      });
-      const d = await res.json();
-      updateBars(d);
-      document.getElementById('context-out').textContent = d.context || '';
-      prependHistory(d);
-      setEl('last-latency', `${d.latency_ms}ms`);
-      setEl('tokens-saved', fmt(_state.totalSaved + (d.naive_tokens - d.astra_tokens)));
-      _state.totalSaved += (d.naive_tokens - d.astra_tokens);
-    } finally {
-      btn.disabled = false;
-      btn.textContent = 'Run ▶';
-    }
+const evtSource = new EventSource(`${API}/api/stream`);
+evtSource.onmessage = (e) => {
+  const d = JSON.parse(e.data);
+  setEl('stat-nodes', fmt(d.nodes));
+  setEl('stat-edges', fmt(d.edges));
+  setEl('stat-files', d.files);
+  setEl('symbol-count', fmt(d.nodes));
+  setEl('file-count', `${d.files} files · ${fmt(d.edges)} edges`);
+  setEl('query-count', d.query_count);
+  setEl('tokens-saved', fmt(d.total_saved));
+  const costSaved = ((d.total_saved || 0) / 1_000_000 * 3).toFixed(4);
+  setEl('cost-saved', `$${costSaved}`);
+  if (d.last_query) updateBars(d.last_query);
+  // refresh graph overlay counts live
+  if (_graph.loaded) {
+    setEl('g-node-count', fmt(_graph.visibleNodes));
+    setEl('g-edge-count', fmt(_graph.visibleEdges));
   }
+};
 
-  document.getElementById('task-input').addEventListener('keydown', e => {
-    if (e.key === 'Enter') runQuery();
-  });
+fetch(`${API}/api/stats`).then(r=>r.json()).then(d => {
+  setEl('stat-nodes', fmt(d.graph.nodes));
+  setEl('stat-edges', fmt(d.graph.edges));
+  setEl('stat-files', d.graph.files);
+  setEl('symbol-count', fmt(d.graph.nodes));
+  setEl('file-count', `${d.graph.files} files · ${fmt(d.graph.edges)} edges`);
+  setEl('tokens-saved', fmt(d.total_saved));
+  setEl('query-count', d.queries.length);
+  const naive = d.naive_tokens;
+  document.getElementById('bar-naive').style.width = '100%';
+  setEl('naive-tok', `${fmt(naive)} tokens`);
+  renderHistory(d.queries);
+});
 
-  // ── Search ──────────────────────────────────────────────────────────────
-  async function runSearch() {
-    const q = document.getElementById('search-input').value.trim();
-    if (!q) return;
-    const res = await fetch(`${API}/api/search?q=${encodeURIComponent(q)}&k=8`);
-    const results = await res.json();
-    const el = document.getElementById('search-results');
-    if (!results.length) {
-      el.innerHTML = '<div style="color:var(--text3);font-size:12px">No symbols found.</div>';
-      return;
-    }
-    el.innerHTML = results.map(r => `
-      <div class="search-item">
-        <div class="search-name">${r.name}</div>
-        <div class="search-meta">${r.type} · score ${r.score}</div>
-        <div class="search-sig">${(r.signature||'').slice(0,80)}</div>
-        <div class="search-meta">${r.file.split('/').slice(-2).join('/')}:${r.line_start}</div>
-      </div>`).join('');
-  }
+async function runQuery() {
+  const task = document.getElementById('task-input').value.trim();
+  if (!task) return;
+  const btn = document.getElementById('query-btn');
+  btn.disabled = true; btn.textContent = '…';
+  document.getElementById('context-out').innerHTML = '<span class="context-placeholder">Querying graph…</span>';
+  try {
+    const res = await fetch(`${API}/api/query`, {
+      method: 'POST', headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({task, max_tokens: 4000}),
+    });
+    const d = await res.json();
+    updateBars(d);
+    document.getElementById('context-out').textContent = d.context || '';
+    prependHistory(d);
+    setEl('last-latency', `${d.latency_ms}ms`);
+    _state.totalSaved += (d.naive_tokens - d.astra_tokens);
+    setEl('tokens-saved', fmt(_state.totalSaved));
+  } finally { btn.disabled = false; btn.textContent = 'Run ▶'; }
+}
+document.getElementById('task-input').addEventListener('keydown', e => { if (e.key === 'Enter') runQuery(); });
 
-  // ── Helpers ─────────────────────────────────────────────────────────────
-  const _state = { totalSaved: 0, queryCount: 0 };
+async function runSearch() {
+  const q = document.getElementById('search-input').value.trim();
+  if (!q) return;
+  const res = await fetch(`${API}/api/search?q=${encodeURIComponent(q)}&k=8`);
+  const results = await res.json();
+  const el = document.getElementById('search-results');
+  if (!results.length) { el.innerHTML = '<div style="color:var(--text3);font-size:12px">No symbols found.</div>'; return; }
+  el.innerHTML = results.map(r => `
+    <div class="search-item">
+      <div class="search-name">${r.name}</div>
+      <div class="search-meta">${r.type} · score ${r.score}</div>
+      <div class="search-sig">${(r.signature||'').slice(0,80)}</div>
+      <div class="search-meta">${r.file.split('/').slice(-2).join('/')}:${r.line_start}</div>
+    </div>`).join('');
+}
 
-  function updateBars(d) {
-    const naive = d.naive_tokens;
-    const astra = d.astra_tokens;
-    const pct = d.reduction_pct || Math.round((1 - astra/Math.max(naive,1))*100);
-    setEl('naive-tok', `${fmt(naive)} tokens`);
-    setEl('astra-tok', `${fmt(astra)} tokens`);
-    setEl('reduction-pct', `${pct}%`);
+function updateBars(d) {
+  const naive = d.naive_tokens, astra = d.astra_tokens;
+  const pct = d.reduction_pct || Math.round((1 - astra/Math.max(naive,1))*100);
+  setEl('naive-tok', `${fmt(naive)} tokens`);
+  setEl('astra-tok', `${fmt(astra)} tokens`);
+  setEl('reduction-pct', `${pct}%`);
+  const astraW = Math.max(2, Math.round((astra/Math.max(naive,1))*100));
+  document.getElementById('bar-astra').style.width = astraW + '%';
+  document.getElementById('bar-naive').style.width = '100%';
+  const circumference = 408.4;
+  document.getElementById('ring-fg').style.strokeDashoffset = circumference * (1 - pct/100);
+  setEl('ring-pct', `${pct}%`);
+}
 
-    // bars: astra as % of naive
-    const astraW = Math.max(2, Math.round((astra/Math.max(naive,1))*100));
-    document.getElementById('bar-astra').style.width = astraW + '%';
-    document.getElementById('bar-naive').style.width = '100%';
+function prependHistory(d) {
+  _state.queryCount++;
+  setEl('query-count', _state.queryCount);
+  const list = document.getElementById('query-list');
+  const existing = list.querySelector('.query-item.latest');
+  if (existing) existing.classList.remove('latest');
+  const noItems = list.querySelector('div:not(.query-item)');
+  if (noItems) list.innerHTML = '';
+  const item = document.createElement('div');
+  item.className = 'query-item latest';
+  item.innerHTML = `
+    <div>
+      <div class="query-task">${d.task}</div>
+      <div class="query-meta">${fmt(d.naive_tokens)} → ${fmt(d.astra_tokens)} tokens · ${d.latency_ms}ms · ${d.symbols} symbols</div>
+    </div>
+    <div class="query-badge">${d.reduction_pct}% saved</div>`;
+  list.prepend(item);
+}
 
-    // ring: circumference = 2πr = 408.4 for r=65
-    const circumference = 408.4;
-    const offset = circumference * (1 - pct/100);
-    document.getElementById('ring-fg').style.strokeDashoffset = offset;
-    setEl('ring-pct', `${pct}%`);
-  }
-
-  function prependHistory(d) {
-    _state.queryCount++;
-    setEl('query-count', _state.queryCount);
-    const list = document.getElementById('query-list');
-    const existing = list.querySelector('.query-item.latest');
-    if (existing) existing.classList.remove('latest');
-    const noItems = list.querySelector('div:not(.query-item)');
-    if (noItems) list.innerHTML = '';
-
+function renderHistory(queries) {
+  if (!queries || !queries.length) return;
+  const list = document.getElementById('query-list');
+  list.innerHTML = '';
+  [...queries].reverse().forEach((d, i) => {
+    const pct = d.reduction_pct || Math.round((1-d.astra_tokens/Math.max(d.naive_tokens,1))*100);
     const item = document.createElement('div');
-    item.className = 'query-item latest';
+    item.className = 'query-item' + (i===0?' latest':'');
     item.innerHTML = `
       <div>
         <div class="query-task">${d.task}</div>
-        <div class="query-meta">${fmt(d.naive_tokens)} → ${fmt(d.astra_tokens)} tokens · ${d.latency_ms}ms · ${d.symbols} symbols</div>
+        <div class="query-meta">${fmt(d.naive_tokens)} → ${fmt(d.astra_tokens)} tokens · ${d.latency_ms}ms</div>
       </div>
-      <div class="query-badge">${d.reduction_pct}% saved</div>`;
-    list.prepend(item);
-  }
+      <div class="query-badge">${pct}% saved</div>`;
+    list.appendChild(item);
+  });
+}
 
-  function renderHistory(queries) {
-    if (!queries || !queries.length) return;
-    const list = document.getElementById('query-list');
-    list.innerHTML = '';
-    [...queries].reverse().forEach((d, i) => {
-      const pct = d.reduction_pct || Math.round((1-d.astra_tokens/Math.max(d.naive_tokens,1))*100);
-      const item = document.createElement('div');
-      item.className = 'query-item' + (i===0?' latest':'');
-      item.innerHTML = `
-        <div>
-          <div class="query-task">${d.task}</div>
-          <div class="query-meta">${fmt(d.naive_tokens)} → ${fmt(d.astra_tokens)} tokens · ${d.latency_ms}ms</div>
-        </div>
-        <div class="query-badge">${pct}% saved</div>`;
-      list.appendChild(item);
-    });
-  }
+// ═══════════════════════════════════════════════════════ GRAPH VIZ
+const _graph = {
+  loaded: false, data: null, simulation: null,
+  svg: null, zoom: null, g: null,
+  nodeMap: {}, selectedId: null,
+  visibleNodes: 0, visibleEdges: 0,
+};
 
-  function setEl(id, val) {
-    const el = document.getElementById(id);
-    if (el) el.textContent = val;
+const NODE_COLOR = {
+  file: '#eab308',
+  class: '#f97316',
+  function: '#5eead4',
+};
+const NODE_RADIUS = { file: 8, class: 7, function: 5 };
+
+async function loadGraph() {
+  document.getElementById('graph-loading').style.display = 'flex';
+  try {
+    const res = await fetch('/api/graph?limit=500');
+    const data = await res.json();
+    _graph.data = data;
+    _graph.loaded = true;
+    buildNodeMap(data.nodes);
+    renderGraph(data.nodes, data.edges);
+    setEl('g-node-count', fmt(data.nodes.length));
+    setEl('g-edge-count', fmt(data.edges.length));
+    _graph.visibleNodes = data.nodes.length;
+    _graph.visibleEdges = data.edges.length;
+  } catch(e) {
+    document.getElementById('graph-loading').textContent = 'Failed to load graph. Is dashboard running?';
   }
-  function fmt(n) {
-    if (!n && n !== 0) return '0';
-    return Number(n).toLocaleString();
+}
+
+function buildNodeMap(nodes) {
+  _graph.nodeMap = {};
+  nodes.forEach(n => { _graph.nodeMap[n.id] = n; });
+}
+
+function renderGraph(nodes, edges) {
+  const canvas = document.getElementById('graph-canvas');
+  const W = canvas.clientWidth, H = canvas.clientHeight;
+
+  // clear previous
+  d3.select('#graph-svg').selectAll('*').remove();
+
+  const svg = d3.select('#graph-svg');
+  _graph.svg = svg;
+
+  // defs: arrowhead
+  svg.append('defs').append('marker')
+    .attr('id', 'arrow')
+    .attr('viewBox', '0 -4 8 8')
+    .attr('refX', 14).attr('refY', 0)
+    .attr('markerWidth', 5).attr('markerHeight', 5)
+    .attr('orient', 'auto')
+    .append('path')
+    .attr('d', 'M0,-4L8,0L0,4')
+    .attr('fill', '#3a3a4a');
+
+  const zoom = d3.zoom()
+    .scaleExtent([0.05, 4])
+    .on('zoom', (event) => { g.attr('transform', event.transform); });
+  svg.call(zoom);
+  _graph.zoom = zoom;
+
+  const g = svg.append('g');
+  _graph.g = g;
+
+  // build adjacency for highlight
+  const adj = {};
+  edges.forEach(e => {
+    if (!adj[e.src]) adj[e.src] = new Set();
+    if (!adj[e.dst]) adj[e.dst] = new Set();
+    adj[e.src].add(e.dst);
+    adj[e.dst].add(e.src);
+  });
+
+  // links
+  const link = g.append('g').attr('class', 'links')
+    .selectAll('line')
+    .data(edges)
+    .join('line')
+    .attr('stroke', '#2a2a3a')
+    .attr('stroke-width', 1)
+    .attr('marker-end', 'url(#arrow)');
+
+  // node groups
+  const node = g.append('g').attr('class', 'nodes')
+    .selectAll('g')
+    .data(nodes)
+    .join('g')
+    .attr('class', 'node-g')
+    .style('cursor', 'pointer')
+    .call(d3.drag()
+      .on('start', (event, d) => {
+        if (!event.active) _graph.simulation.alphaTarget(0.3).restart();
+        d.fx = d.x; d.fy = d.y;
+      })
+      .on('drag', (event, d) => { d.fx = event.x; d.fy = event.y; })
+      .on('end', (event, d) => {
+        if (!event.active) _graph.simulation.alphaTarget(0);
+        d.fx = null; d.fy = null;
+      })
+    );
+
+  // circle
+  node.append('circle')
+    .attr('r', d => NODE_RADIUS[d.type] || 5)
+    .attr('fill', d => NODE_COLOR[d.type] || '#7c6af7')
+    .attr('fill-opacity', 0.85)
+    .attr('stroke', d => NODE_COLOR[d.type] || '#7c6af7')
+    .attr('stroke-width', 1.5)
+    .attr('stroke-opacity', 0.5);
+
+  // label (only for file + class nodes by default)
+  node.append('text')
+    .attr('dx', d => (NODE_RADIUS[d.type] || 5) + 4)
+    .attr('dy', '0.35em')
+    .attr('font-size', d => d.type === 'file' ? 11 : 9)
+    .attr('fill', d => d.type === 'file' ? '#eab308' : d.type === 'class' ? '#f97316' : '#64748b')
+    .attr('pointer-events', 'none')
+    .text(d => d.type !== 'function' ? d.name : '');
+
+  // tooltip
+  const tooltip = document.getElementById('g-tooltip');
+
+  node.on('mouseover', (event, d) => {
+    tooltip.innerHTML = `<div class="t-name">${d.name}</div><div class="t-meta">${d.type} · ${d.file.split('/').slice(-1)[0]}</div>`;
+    tooltip.classList.add('visible');
+  }).on('mousemove', (event) => {
+    const rect = canvas.getBoundingClientRect();
+    tooltip.style.left = (event.clientX - rect.left + 12) + 'px';
+    tooltip.style.top  = (event.clientY - rect.top  - 10) + 'px';
+  }).on('mouseout', () => {
+    tooltip.classList.remove('visible');
+  });
+
+  // click → highlight + detail panel
+  node.on('click', (event, d) => {
+    event.stopPropagation();
+    _graph.selectedId = d.id;
+    highlightNode(d, node, link, adj);
+    showNodeDetail(d);
+  });
+
+  svg.on('click', () => {
+    _graph.selectedId = null;
+    resetHighlight(node, link);
+    document.getElementById('node-detail').innerHTML = '<div class="detail-empty">Click any node to explore its connections.</div>';
+  });
+
+  // force simulation
+  const sim = d3.forceSimulation(nodes)
+    .force('link', d3.forceLink(edges).id(d => d.id).distance(60).strength(0.4))
+    .force('charge', d3.forceManyBody().strength(-80))
+    .force('center', d3.forceCenter(W / 2, H / 2))
+    .force('collision', d3.forceCollide().radius(d => (NODE_RADIUS[d.type] || 5) + 3));
+
+  _graph.simulation = sim;
+
+  sim.on('tick', () => {
+    link
+      .attr('x1', d => d.source.x).attr('y1', d => d.source.y)
+      .attr('x2', d => d.target.x).attr('y2', d => d.target.y);
+    node.attr('transform', d => `translate(${d.x},${d.y})`);
+  });
+
+  sim.on('end', () => {
+    document.getElementById('graph-loading').style.display = 'none';
+  });
+
+  // hide loading after brief delay even if sim doesn't "end"
+  setTimeout(() => { document.getElementById('graph-loading').style.display = 'none'; }, 3000);
+}
+
+function highlightNode(d, node, link, adj) {
+  const neighbors = adj[d.id] || new Set();
+  node.selectAll('circle')
+    .attr('fill-opacity', n => n.id === d.id || neighbors.has(n.id) ? 1.0 : 0.12)
+    .attr('stroke-opacity', n => n.id === d.id || neighbors.has(n.id) ? 1.0 : 0.1)
+    .attr('r', n => n.id === d.id ? (NODE_RADIUS[n.type] || 5) * 1.8 : (NODE_RADIUS[n.type] || 5));
+  node.selectAll('text')
+    .attr('fill-opacity', n => n.id === d.id || neighbors.has(n.id) ? 1.0 : 0.1)
+    .text(n => (n.id === d.id || neighbors.has(n.id)) ? n.name : (n.type !== 'function' ? n.name : ''));
+  link
+    .attr('stroke', e => (e.source.id === d.id || e.target.id === d.id) ? '#7c6af7' : '#1e1e2a')
+    .attr('stroke-width', e => (e.source.id === d.id || e.target.id === d.id) ? 2 : 0.5)
+    .attr('stroke-opacity', e => (e.source.id === d.id || e.target.id === d.id) ? 0.9 : 0.2);
+}
+
+function resetHighlight(node, link) {
+  node.selectAll('circle')
+    .attr('fill-opacity', 0.85)
+    .attr('stroke-opacity', 0.5)
+    .attr('r', d => NODE_RADIUS[d.type] || 5);
+  node.selectAll('text')
+    .attr('fill-opacity', 1)
+    .text(d => d.type !== 'function' ? d.name : '');
+  link
+    .attr('stroke', '#2a2a3a')
+    .attr('stroke-width', 1)
+    .attr('stroke-opacity', 1);
+}
+
+async function showNodeDetail(d) {
+  const panel = document.getElementById('node-detail');
+  const fileParts = d.file.split('/');
+  const fileShort = fileParts.slice(-2).join('/');
+
+  // immediate skeleton
+  panel.innerHTML = `
+    <div class="detail-name">${d.name}</div>
+    <span class="detail-type ${d.type}">${d.type}</span>
+    <div class="detail-sig">${(d.signature || '').slice(0, 200)}</div>
+    <div class="detail-file">📄 ${fileShort}:${d.line}</div>
+    <div style="color:var(--text3);font-size:11px">Loading connections…</div>`;
+
+  try {
+    const res = await fetch(`/api/graph/node/${encodeURIComponent(d.id)}`);
+    const info = await res.json();
+    if (info.error) return;
+
+    const callers = info.callers || [];
+    const callees = info.callees || [];
+
+    const makeList = (items, label) => {
+      if (!items.length) return '';
+      return `<div class="detail-section">${label} (${items.length})</div>
+        <div class="detail-node-list">
+          ${items.map(n => `
+            <div class="detail-node-item" onclick="focusNodeById('${n.id}')">
+              <div class="n-name">${n.name}</div>
+              <div class="n-meta">${n.file.split('/').slice(-1)[0]}:${n.line_start}</div>
+            </div>`).join('')}
+        </div>`;
+    };
+
+    panel.innerHTML = `
+      <div class="detail-name">${d.name}</div>
+      <span class="detail-type ${d.type}">${d.type}</span>
+      <div class="detail-sig">${(d.signature || '').slice(0, 300)}</div>
+      <div class="detail-file">📄 ${fileShort}:${d.line}</div>
+      ${makeList(callers, '⬆ Called by')}
+      ${makeList(callees, '⬇ Calls')}
+      ${!callers.length && !callees.length ? '<div style="color:var(--text3);font-size:11px;margin-top:8px">No call edges recorded.</div>' : ''}`;
+  } catch(e) {
+    // leave skeleton as-is
   }
+}
+
+function focusNodeById(id) {
+  if (!_graph.g) return;
+  const nodeData = _graph.data.nodes.find(n => n.id === id);
+  if (!nodeData) return;
+
+  // build adj map
+  const adj = {};
+  _graph.data.edges.forEach(e => {
+    if (!adj[e.src]) adj[e.src] = new Set();
+    if (!adj[e.dst]) adj[e.dst] = new Set();
+    adj[e.src].add(e.dst);
+    adj[e.dst].add(e.src);
+  });
+
+  const node = _graph.g.selectAll('.node-g');
+  const link = _graph.g.selectAll('line');
+  highlightNode(nodeData, node, link, adj);
+  showNodeDetail(nodeData);
+
+  // pan to node
+  const W = document.getElementById('graph-canvas').clientWidth;
+  const H = document.getElementById('graph-canvas').clientHeight;
+  const t = d3.zoomTransform(_graph.svg.node());
+  const targetX = W/2 - nodeData.x * t.k;
+  const targetY = H/2 - nodeData.y * t.k;
+  _graph.svg.transition().duration(500).call(
+    _graph.zoom.transform,
+    d3.zoomIdentity.translate(targetX, targetY).scale(t.k)
+  );
+}
+
+function applyGraphFilter() {
+  const q = document.getElementById('graph-filter').value.toLowerCase().trim();
+  if (!_graph.g) return;
+  if (!q) { resetGraph(); return; }
+
+  const matching = new Set(
+    _graph.data.nodes
+      .filter(n => n.name.toLowerCase().includes(q) || n.file.toLowerCase().includes(q))
+      .map(n => n.id)
+  );
+
+  _graph.g.selectAll('.node-g').selectAll('circle')
+    .attr('fill-opacity', d => matching.has(d.id) ? 1 : 0.05)
+    .attr('stroke-opacity', d => matching.has(d.id) ? 1 : 0.03);
+  _graph.g.selectAll('.node-g').selectAll('text')
+    .attr('fill-opacity', d => matching.has(d.id) ? 1 : 0)
+    .text(d => matching.has(d.id) ? d.name : '');
+  _graph.g.selectAll('line')
+    .attr('stroke-opacity', e => (matching.has(e.source.id) && matching.has(e.target.id)) ? 0.6 : 0.03);
+}
+
+function resetGraph() {
+  document.getElementById('graph-filter').value = '';
+  if (!_graph.g) return;
+  const node = _graph.g.selectAll('.node-g');
+  const link = _graph.g.selectAll('line');
+  resetHighlight(node, link);
+}
+
+function graphZoom(factor) {
+  _graph.svg.transition().duration(300).call(_graph.zoom.scaleBy, factor);
+}
+
+function graphFit() {
+  if (!_graph.g) return;
+  const W = document.getElementById('graph-canvas').clientWidth;
+  const H = document.getElementById('graph-canvas').clientHeight;
+  _graph.svg.transition().duration(500).call(
+    _graph.zoom.transform,
+    d3.zoomIdentity.translate(W/2, H/2).scale(0.6).translate(-W/2, -H/2)
+  );
+}
+
+// ═══════════════════════════════════════════════════════ HELPERS
+function setEl(id, val) { const el = document.getElementById(id); if (el) el.textContent = val; }
+function fmt(n) { if (!n && n !== 0) return '0'; return Number(n).toLocaleString(); }
 </script>
 </body>
 </html>

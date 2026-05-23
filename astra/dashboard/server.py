@@ -114,6 +114,58 @@ async def api_query(body: dict):
     return {**entry, "context": result["context"]}
 
 
+@app.get("/api/graph")
+def api_graph(limit: int = 400, file: str = ""):
+    """Return nodes + edges for graph visualization."""
+    store = _get_store()
+    with store._lock:
+        if file:
+            node_rows = store.conn.execute(
+                "SELECT id, name, type, file, signature, line_start FROM nodes WHERE file LIKE ? LIMIT ?",
+                (f"%{file}%", limit),
+            ).fetchall()
+        else:
+            node_rows = store.conn.execute(
+                "SELECT id, name, type, file, signature, line_start FROM nodes LIMIT ?",
+                (limit,),
+            ).fetchall()
+        node_ids = {r["id"] for r in node_rows}
+        edge_rows = store.conn.execute("SELECT src, dst, relation FROM edges").fetchall()
+
+    nodes = [
+        {
+            "id": r["id"],
+            "name": r["name"],
+            "type": r["type"],
+            "file": r["file"],
+            "signature": r["signature"] or "",
+            "line": r["line_start"],
+        }
+        for r in node_rows
+    ]
+    edges = [
+        {"src": r["src"], "dst": r["dst"], "relation": r["relation"]}
+        for r in edge_rows
+        if r["src"] in node_ids and r["dst"] in node_ids
+    ]
+    return {"nodes": nodes, "edges": edges}
+
+
+@app.get("/api/graph/node/{node_id:path}")
+def api_graph_node(node_id: str):
+    """Return full node detail + callers + callees."""
+    store = _get_store()
+    node = store.get_node(node_id)
+    if not node:
+        return {"error": "not found"}
+    node.pop("embedding", None)
+    callers = store.get_callers(node_id)
+    callees = store.get_callees(node_id)
+    for n in callers + callees:
+        n.pop("embedding", None)
+    return {"node": node, "callers": callers, "callees": callees}
+
+
 @app.get("/api/search")
 def api_search(q: str = "", k: int = 10):
     if not q:
