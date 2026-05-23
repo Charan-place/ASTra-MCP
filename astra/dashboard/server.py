@@ -12,7 +12,7 @@ from typing import AsyncGenerator
 
 import uvicorn
 from fastapi import FastAPI
-from fastapi.responses import HTMLResponse, StreamingResponse
+from fastapi.responses import HTMLResponse, StreamingResponse, FileResponse
 from fastapi.middleware.cors import CORSMiddleware
 
 from astra.graph.store import GraphStore
@@ -193,6 +193,11 @@ async def api_stream():
             await asyncio.sleep(2)
 
     return StreamingResponse(generator(), media_type="text/event-stream")
+
+
+@app.get("/d3.min.js")
+def serve_d3():
+    return FileResponse(Path(__file__).parent / "d3.min.js", media_type="application/javascript")
 
 
 @app.get("/", response_class=HTMLResponse)
