@@ -24,6 +24,7 @@ logger = logging.getLogger("astra.mcp")
 
 from astra.graph.store import GraphStore
 from astra.memory.session import SessionMemory
+from astra.indexer.graph_builder import index_codebase
 from astra.mcp.tools import (
     tool_get_context,
     tool_search,
@@ -138,12 +139,26 @@ def _project() -> str:
     return os.environ.get("ASTRA_PROJECT", str(Path.cwd()))
 
 
+def _auto_index_if_empty(store: GraphStore, project: str):
+    """Index codebase on first launch if DB is empty."""
+    stats = store.stats()
+    if stats["nodes"] == 0:
+        logger.info("Index empty — auto-indexing %s ...", project)
+        try:
+            result = index_codebase(Path(project), store)
+            logger.info("Auto-index done: %d files, %d symbols", result["files"], result["symbols"])
+        except Exception as e:
+            logger.warning("Auto-index failed: %s", e)
+
+
 async def run_server():
     server = Server("astra-mcp")
     store = _get_store()
     memory = _get_memory(store)
     project = _project()
     logger.info("ASTra MCP server starting. project=%s data_dir=%s", project, store.db_path)
+    loop = asyncio.get_event_loop()
+    await loop.run_in_executor(None, _auto_index_if_empty, store, project)
 
     @server.list_tools()
     async def list_tools() -> list[Tool]:
