@@ -49,3 +49,5 @@ htmlcov/
 
 # Logs
 *.log
+.vercel
+.env*.local

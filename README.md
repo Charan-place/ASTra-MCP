@@ -10,12 +10,12 @@
 
 <br/>
 
+[![Live Demo](https://img.shields.io/badge/🎮_Live_Demo-Try_Now-ff3a8c?style=flat-square)](https://ast-ra-mcp.vercel.app/demo)
 ![License](https://img.shields.io/badge/License-Apache_2.0-5eead4?style=flat-square)
 ![Python](https://img.shields.io/badge/Python-3.10+-3776AB?style=flat-square&logo=python&logoColor=white)
 ![MCP](https://img.shields.io/badge/Protocol-MCP-7c6af7?style=flat-square)
 ![Token Reduction](https://img.shields.io/badge/Token%20Reduction-98.9%25-ff3a8c?style=flat-square)
 ![Local First](https://img.shields.io/badge/Local-First-eab308?style=flat-square)
-![Status](https://img.shields.io/badge/Status-Stable-5eead4?style=flat-square)
 
 [Quickstart](#-quickstart) · [Live Demo](#-live-demo) · [How It Works](#-how-it-works) · [Use Cases](#-what-questions-astra-can-answer) · [Install](#-installation) · [FAQ](#-frequently-asked-questions)
 
@@ -126,7 +126,7 @@ ASTra builds a **permanent knowledge graph** of your codebase. Before every AI t
 
 ### 🌐 Open in Browser
 
-<a href="https://astra-mcp.vercel.app/demo"><b>astra-mcp.vercel.app/demo ↗</b></a>
+<a href="https://ast-ra-mcp.vercel.app/demo"><b>ast-ra-mcp.vercel.app/demo ↗</b></a>
 
 *(Live on Vercel · full D3 interactivity)*
 
