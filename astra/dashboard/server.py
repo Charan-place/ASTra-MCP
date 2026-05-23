@@ -41,24 +41,36 @@ def _get_store() -> GraphStore:
     return _state["store"]
 
 
+_naive_cache: dict = {"count": 0, "root": None, "ts": 0.0}
+_NAIVE_TTL_S = 60
+
+
 def _naive_token_count(root: Path) -> int:
+    now = time.time()
+    if _naive_cache["root"] == str(root) and now - _naive_cache["ts"] < _NAIVE_TTL_S:
+        return _naive_cache["count"]
     total = 0
     for path in iter_source_files(root):
         try:
             total += len(path.read_text(errors="replace")) // 4
         except Exception:
             pass
+    _naive_cache["count"] = total
+    _naive_cache["root"] = str(root)
+    _naive_cache["ts"] = now
     return total
 
 
 # ── API ────────────────────────────────────────────────────────────────────
 
 @app.get("/api/stats")
-def api_stats():
+async def api_stats():
     store = _get_store()
     graph_stats = store.stats()
     root = Path(os.environ.get("ASTRA_PROJECT", "."))
-    naive = _naive_token_count(root)
+    # Run file scan in thread pool so we don't block the event loop
+    loop = asyncio.get_event_loop()
+    naive = await loop.run_in_executor(None, _naive_token_count, root)
     return {
         "graph": graph_stats,
         "naive_tokens": naive,
@@ -78,7 +90,8 @@ async def api_query(body: dict):
 
     store = _get_store()
     root = Path(os.environ.get("ASTRA_PROJECT", "."))
-    naive = _naive_token_count(root)
+    loop = asyncio.get_event_loop()
+    naive = await loop.run_in_executor(None, _naive_token_count, root)
 
     t0 = time.perf_counter()
     result = get_context(store, task, max_tokens=max_tokens)

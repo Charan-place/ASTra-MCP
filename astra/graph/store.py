@@ -1,6 +1,7 @@
 """SQLite-backed graph store. Nodes = symbols, Edges = relationships."""
+import json
 import sqlite3
-import struct
+import threading
 import time
 from pathlib import Path
 from typing import Optional
@@ -16,16 +17,25 @@ _SCHEMA = Path(__file__).parent / "schema.sql"
 class GraphStore:
     def __init__(self, db_path: Path):
         self.db_path = db_path
+        self._lock = threading.Lock()
         self.conn = sqlite3.connect(str(db_path), check_same_thread=False)
         self.conn.row_factory = sqlite3.Row
         self.conn.execute("PRAGMA journal_mode=WAL")
         self.conn.execute("PRAGMA synchronous=NORMAL")
         self._init_schema()
+        self._migrate()
 
     def _init_schema(self):
         schema = _SCHEMA.read_text()
         self.conn.executescript(schema)
         self.conn.commit()
+
+    def _migrate(self):
+        """Add new columns to existing DBs without breaking old installs."""
+        cols = {r[1] for r in self.conn.execute("PRAGMA table_info(nodes)").fetchall()}
+        if "calls_json" not in cols:
+            self.conn.execute("ALTER TABLE nodes ADD COLUMN calls_json TEXT")
+            self.conn.commit()
 
     # ── Write ──────────────────────────────────────────────────────────────
 
@@ -33,46 +43,52 @@ class GraphStore:
         emb_bytes = None
         if embedding is not None:
             emb_bytes = embedding.astype(np.float32).tobytes()
-        self.conn.execute(
-            """
-            INSERT OR REPLACE INTO nodes
-              (id, type, name, file, signature, docstring,
-               line_start, line_end, raw_text, embedding, indexed_at)
-            VALUES (?,?,?,?,?,?,?,?,?,?,?)
-            """,
-            (
-                symbol.id, symbol.type, symbol.name, symbol.file,
-                symbol.signature, symbol.docstring,
-                symbol.line_start, symbol.line_end,
-                symbol.raw_text, emb_bytes, time.time(),
-            ),
-        )
+        calls_json = json.dumps(symbol.calls) if symbol.calls else None
+        with self._lock:
+            self.conn.execute(
+                """
+                INSERT OR REPLACE INTO nodes
+                  (id, type, name, file, signature, docstring,
+                   line_start, line_end, raw_text, embedding, indexed_at, calls_json)
+                VALUES (?,?,?,?,?,?,?,?,?,?,?,?)
+                """,
+                (
+                    symbol.id, symbol.type, symbol.name, symbol.file,
+                    symbol.signature, symbol.docstring,
+                    symbol.line_start, symbol.line_end,
+                    symbol.raw_text, emb_bytes, time.time(), calls_json,
+                ),
+            )
 
     def upsert_edge(self, edge: Edge):
-        self.conn.execute(
-            "INSERT OR IGNORE INTO edges (src, dst, relation) VALUES (?,?,?)",
-            (edge.src, edge.dst, edge.relation),
-        )
+        with self._lock:
+            self.conn.execute(
+                "INSERT OR IGNORE INTO edges (src, dst, relation) VALUES (?,?,?)",
+                (edge.src, edge.dst, edge.relation),
+            )
 
     def upsert_file_hash(self, file: str, hash_val: str):
-        self.conn.execute(
-            "INSERT OR REPLACE INTO file_hashes (file, hash, indexed_at) VALUES (?,?,?)",
-            (file, hash_val, time.time()),
-        )
+        with self._lock:
+            self.conn.execute(
+                "INSERT OR REPLACE INTO file_hashes (file, hash, indexed_at) VALUES (?,?,?)",
+                (file, hash_val, time.time()),
+            )
 
     def delete_file(self, file: str):
         """Remove all nodes and edges belonging to a file."""
-        cur = self.conn.execute("SELECT id FROM nodes WHERE file=?", (file,))
-        node_ids = [r["id"] for r in cur.fetchall()]
-        if node_ids:
-            placeholders = ",".join("?" * len(node_ids))
-            self.conn.execute(f"DELETE FROM edges WHERE src IN ({placeholders})", node_ids)
-            self.conn.execute(f"DELETE FROM edges WHERE dst IN ({placeholders})", node_ids)
-        self.conn.execute("DELETE FROM nodes WHERE file=?", (file,))
-        self.conn.execute("DELETE FROM file_hashes WHERE file=?", (file,))
+        with self._lock:
+            cur = self.conn.execute("SELECT id FROM nodes WHERE file=?", (file,))
+            node_ids = [r["id"] for r in cur.fetchall()]
+            if node_ids:
+                placeholders = ",".join("?" * len(node_ids))
+                self.conn.execute(f"DELETE FROM edges WHERE src IN ({placeholders})", node_ids)
+                self.conn.execute(f"DELETE FROM edges WHERE dst IN ({placeholders})", node_ids)
+            self.conn.execute("DELETE FROM nodes WHERE file=?", (file,))
+            self.conn.execute("DELETE FROM file_hashes WHERE file=?", (file,))
 
     def commit(self):
-        self.conn.commit()
+        with self._lock:
+            self.conn.commit()
 
     # ── Read ───────────────────────────────────────────────────────────────
 
@@ -118,6 +134,23 @@ class GraphStore:
     def all_node_ids(self) -> list[str]:
         rows = self.conn.execute("SELECT id FROM nodes").fetchall()
         return [r["id"] for r in rows]
+
+    def get_all_symbol_calls(self) -> list[dict]:
+        """Return (id, file, calls_json) for all nodes that have recorded calls."""
+        rows = self.conn.execute(
+            "SELECT id, file, calls_json FROM nodes WHERE calls_json IS NOT NULL"
+        ).fetchall()
+        return [dict(r) for r in rows]
+
+    def get_name_to_ids(self) -> dict:
+        """Return {name: [(id, file), ...]} for all non-file nodes. Used for cross-file resolution."""
+        rows = self.conn.execute(
+            "SELECT id, name, file FROM nodes WHERE type != 'file'"
+        ).fetchall()
+        result: dict = {}
+        for r in rows:
+            result.setdefault(r["name"], []).append((r["id"], r["file"]))
+        return result
 
     def stats(self) -> dict:
         n_nodes = self.conn.execute("SELECT COUNT(*) FROM nodes").fetchone()[0]

@@ -1,4 +1,5 @@
 """Main query engine: task description → minimal relevant context."""
+import time
 import networkx as nx
 
 from astra.graph.store import GraphStore
@@ -6,15 +7,22 @@ from astra.graph.pagerank import build_nx_graph, personalized_pagerank
 from astra.indexer.embedder import embed_text, top_k_similar
 from astra.query.serializer import build_context
 
-_nx_graph_cache: dict[str, nx.DiGraph] = {}
+# Cache: db_path -> (graph, built_at_timestamp)
+_nx_graph_cache: dict[str, tuple[nx.DiGraph, float]] = {}
+_CACHE_TTL_S = 300  # rebuild graph after 5 minutes of no invalidation
 
 
 def _get_graph(store: GraphStore) -> nx.DiGraph:
-    """Cache NX graph per db path. Rebuilt on explicit call."""
     key = str(store.db_path)
-    if key not in _nx_graph_cache:
-        _nx_graph_cache[key] = build_nx_graph(store)
-    return _nx_graph_cache[key]
+    now = time.monotonic()
+    entry = _nx_graph_cache.get(key)
+    if entry is not None:
+        graph, built_at = entry
+        if now - built_at < _CACHE_TTL_S:
+            return graph
+    graph = build_nx_graph(store)
+    _nx_graph_cache[key] = (graph, now)
+    return graph
 
 
 def invalidate_graph_cache(store: GraphStore):

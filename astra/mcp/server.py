@@ -1,7 +1,9 @@
 """MCP server. Exposes 7 tools to Claude Code, Codex, Cursor via stdio."""
 import asyncio
 import json
+import logging
 import os
+import traceback
 from pathlib import Path
 
 from mcp.server import Server
@@ -12,6 +14,13 @@ from mcp.types import (
     CallToolResult,
     ListToolsResult,
 )
+
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
+    handlers=[logging.StreamHandler()],
+)
+logger = logging.getLogger("astra.mcp")
 
 from astra.graph.store import GraphStore
 from astra.memory.session import SessionMemory
@@ -134,6 +143,7 @@ async def run_server():
     store = _get_store()
     memory = _get_memory(store)
     project = _project()
+    logger.info("ASTra MCP server starting. project=%s data_dir=%s", project, store.db_path)
 
     @server.list_tools()
     async def list_tools() -> list[Tool]:
@@ -141,6 +151,7 @@ async def run_server():
 
     @server.call_tool()
     async def call_tool(name: str, arguments: dict) -> list[TextContent]:
+        logger.info("Tool called: %s args=%s", name, list(arguments.keys()))
         try:
             if name == "astra_get_context":
                 result = tool_get_context(store, arguments["task"], arguments.get("max_tokens", 4000))
@@ -171,8 +182,12 @@ async def run_server():
             else:
                 text = json.dumps({"error": f"Unknown tool: {name}"})
 
+        except KeyError as e:
+            logger.error("Missing required argument for %s: %s", name, e)
+            text = json.dumps({"error": f"Missing required argument: {e}", "tool": name})
         except Exception as e:
-            text = json.dumps({"error": str(e)})
+            logger.error("Tool %s failed: %s\n%s", name, e, traceback.format_exc())
+            text = json.dumps({"error": str(e), "type": type(e).__name__, "tool": name})
 
         return [TextContent(type="text", text=text)]
 

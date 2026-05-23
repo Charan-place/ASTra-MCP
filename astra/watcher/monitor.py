@@ -1,4 +1,5 @@
 """File watcher: detect changes → re-index only changed files."""
+import logging
 import time
 from pathlib import Path
 
@@ -9,6 +10,8 @@ from astra.indexer.parser import SUPPORTED, SKIP_DIRS
 from astra.indexer.graph_builder import index_single_file
 from astra.graph.store import GraphStore
 from astra.query.engine import invalidate_graph_cache
+
+logger = logging.getLogger("astra.watcher")
 
 
 class _AstraHandler(FileSystemEventHandler):
@@ -34,10 +37,12 @@ class _AstraHandler(FileSystemEventHandler):
             self.store.delete_file(event.src_path)
             self.store.commit()
             invalidate_graph_cache(self.store)
+            logger.info("Removed from index: %s", event.src_path)
 
     def _reindex(self, path: Path):
         count = index_single_file(path, self.store)
         invalidate_graph_cache(self.store)
+        logger.info("Re-indexed %s (%d symbols)", path.name, count)
 
 
 def start_watcher(root: Path, store: GraphStore) -> Observer:

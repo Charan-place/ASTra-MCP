@@ -1,5 +1,7 @@
 """Index a codebase: parse → embed → store in GraphStore."""
 import hashlib
+import json
+import logging
 import time
 from pathlib import Path
 from typing import Optional
@@ -9,16 +11,40 @@ from rich.progress import Progress, SpinnerColumn, TextColumn, BarColumn, TaskPr
 
 from astra.indexer.parser import parse_file, iter_source_files
 from astra.indexer.embedder import embed_texts
-from astra.indexer.symbol_table import Symbol
+from astra.indexer.symbol_table import Symbol, Edge
 from astra.graph.store import GraphStore
 
 console = Console()
+logger = logging.getLogger("astra.indexer")
 
 
 def _file_hash(path: Path) -> str:
     h = hashlib.md5()
     h.update(path.read_bytes())
     return h.hexdigest()
+
+
+def _resolve_cross_file_calls(store: GraphStore) -> int:
+    """
+    Second pass: add CALLS edges for cross-file calls.
+    Uses stored calls_json on each node to find callees in other files.
+    Returns count of new edges added.
+    """
+    name_to_ids = store.get_name_to_ids()
+    symbol_calls = store.get_all_symbol_calls()
+    added = 0
+    for row in symbol_calls:
+        calls = json.loads(row["calls_json"])
+        src_file = row["file"]
+        src_id = row["id"]
+        for callee_name in calls:
+            if callee_name not in name_to_ids:
+                continue
+            for callee_id, callee_file in name_to_ids[callee_name]:
+                if callee_file != src_file:
+                    store.upsert_edge(Edge(src=src_id, dst=callee_id, relation="CALLS"))
+                    added += 1
+    return added
 
 
 def index_codebase(root: Path, store: GraphStore, force: bool = False) -> dict:
@@ -72,8 +98,15 @@ def index_codebase(root: Path, store: GraphStore, force: bool = False) -> dict:
             stats["files_indexed"] += 1
             stats["symbols"] += len(file_syms.symbols)
 
+    # cross-file CALLS resolution (second pass over stored calls_json)
+    cross_edges = _resolve_cross_file_calls(store)
     store.commit()
     stats["elapsed_s"] = round(time.time() - start, 2)
+    stats["cross_file_edges"] = cross_edges
+    logger.info(
+        "Indexed %d files (%d skipped), %d symbols, %d cross-file edges in %.2fs",
+        stats["files_indexed"], stats["skipped"], stats["symbols"], cross_edges, stats["elapsed_s"],
+    )
     return stats
 
 
@@ -104,5 +137,16 @@ def index_single_file(path: Path, store: GraphStore) -> int:
 
     h = hashlib.md5(path.read_bytes()).hexdigest()
     store.upsert_file_hash(file_str, h)
+
+    # resolve cross-file calls for this file only
+    name_to_ids = store.get_name_to_ids()
+    for sym in file_syms.symbols:
+        for callee_name in sym.calls:
+            if callee_name in name_to_ids:
+                for callee_id, callee_file in name_to_ids[callee_name]:
+                    if callee_file != file_str:
+                        store.upsert_edge(Edge(src=sym.id, dst=callee_id, relation="CALLS"))
+
     store.commit()
+    logger.debug("Re-indexed %s: %d symbols", file_str, len(file_syms.symbols))
     return len(file_syms.symbols)

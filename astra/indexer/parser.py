@@ -77,8 +77,13 @@ def _extract_docstring(body_node, src: bytes) -> str:
         if child.type == "expression_statement":
             for sub in child.children:
                 if sub.type == "string":
-                    raw = _text(sub, src).strip("\"'").strip('"""').strip("'''").strip()
-                    return raw[:500]
+                    raw = _text(sub, src)
+                    # Strip surrounding quote delimiters as substrings, not characters
+                    for q in ('"""', "'''", '"', "'"):
+                        if raw.startswith(q) and raw.endswith(q) and len(raw) >= len(q) * 2:
+                            raw = raw[len(q):-len(q)]
+                            break
+                    return raw.strip()[:500]
     return ""
 
 
