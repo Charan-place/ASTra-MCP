@@ -3,7 +3,7 @@
   "version": "0.1.1",
   "description": "AST-powered codebase memory for AI agents. Cuts token usage 93% by injecting only relevant code context via knowledge graph + PageRank.",
   "author": { "name": "Satya Sai Charan" },
-  "license": "MIT",
+  "license": "Apache-2.0",
   "mcpServers": {
     "astra": {
       "command": "python3",

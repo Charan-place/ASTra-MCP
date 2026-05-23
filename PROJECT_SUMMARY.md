@@ -192,7 +192,7 @@ When pushing to GitHub, include:
 - [x] README.md (full docs, API reference, troubleshooting)
 - [x] QUICKSTART.md (2-minute getting started)
 - [x] WHAT_IS_ASTRA.md (5-minute concept)
-- [x] LICENSE (MIT)
+- [x] LICENSE (Apache 2.0)
 - [x] .gitignore (Python, .astra/, IDE)
 - [ ] CONTRIBUTING.md (TBD)
 - [ ] tests/ (framework ready, write tests)

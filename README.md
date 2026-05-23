@@ -10,7 +10,7 @@
 
 <br/>
 
-![License](https://img.shields.io/badge/License-MIT-5eead4?style=flat-square)
+![License](https://img.shields.io/badge/License-Apache_2.0-5eead4?style=flat-square)
 ![Python](https://img.shields.io/badge/Python-3.10+-3776AB?style=flat-square&logo=python&logoColor=white)
 ![MCP](https://img.shields.io/badge/Protocol-MCP-7c6af7?style=flat-square)
 ![Token Reduction](https://img.shields.io/badge/Token%20Reduction-98.9%25-ff3a8c?style=flat-square)
@@ -414,7 +414,7 @@ bash install.sh
 <td>✅</td><td><b>Self-hosted dashboard</b> — Runs on <code>localhost</code> only.</td>
 </tr>
 <tr>
-<td>✅</td><td><b>Open source</b> — MIT licensed. Audit, fork, ship.</td>
+<td>✅</td><td><b>Open source</b> — Apache 2.0 licensed. Audit, fork, ship.</td>
 </tr>
 </table>
 
@@ -511,31 +511,39 @@ PRs welcome. High-value areas:
 
 <div align="center">
 
-**MIT License**
+**Apache License 2.0**
 
-Copyright (c) 2026 **Narra Satya Sai Charan**
+Copyright © 2026 **Narra Satya Sai Charan**
+
+[![Apache 2.0](https://img.shields.io/badge/License-Apache_2.0-blue.svg?style=for-the-badge)](https://www.apache.org/licenses/LICENSE-2.0)
 
 </div>
 
 ```
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
 
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
+    http://www.apache.org/licenses/LICENSE-2.0
 
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND.
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
 ```
 
 Full license → [LICENSE](LICENSE)
 
-✅ **You can:** use it, fork it, modify it, sell it, ship it commercially
-❌ **You cannot:** hold the author liable
-📌 **You must:** include the license + copyright notice in distributions
+| | What Apache 2.0 grants you |
+|---|---|
+| ✅ | **Commercial use** — sell, embed, ship in paid products |
+| ✅ | **Modify** — fork and change anything |
+| ✅ | **Distribute** — share originals or modifications |
+| ✅ | **Patent grant** — contributors grant you patent rights to their code |
+| ✅ | **Private use** — use internally without releasing changes |
+| 📌 | **Must:** include LICENSE + NOTICE, state changes you made, keep copyright notices |
+| ❌ | **Cannot:** use contributor trademarks, hold authors liable, sue contributors over patents |
 
 ---
 

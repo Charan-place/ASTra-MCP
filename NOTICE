@@ -1,0 +1,21 @@
+ASTra MCP
+Copyright 2026 Narra Satya Sai Charan
+
+This product includes software developed by Narra Satya Sai Charan.
+
+Licensed under the Apache License, Version 2.0.
+See LICENSE file or http://www.apache.org/licenses/LICENSE-2.0 for full terms.
+
+---
+
+Third-party dependencies (each retains its own license):
+
+  - tree-sitter, tree-sitter-languages   (MIT)
+  - sentence-transformers                 (Apache 2.0)
+  - networkx                              (BSD 3-Clause)
+  - mcp                                   (MIT)
+  - fastapi                               (MIT)
+  - uvicorn                               (BSD 3-Clause)
+  - typer                                 (MIT)
+  - watchdog                              (Apache 2.0)
+  - d3.js (bundled in dashboard)          (ISC)
