@@ -2,7 +2,7 @@
 .astra/
 *.db
 *.db-journal
-
+ARCHITECTURE.md
 # Python
 __pycache__/
 *.py[cod]

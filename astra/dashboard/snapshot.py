@@ -190,20 +190,43 @@ node.on('click',(e,d)=>{
 node.call(d3.drag().on('start',(e,d)=>{if(!e.active)sim.alphaTarget(.3).restart();d.fx=d.x;d.fy=d.y;}).on('drag',(e,d)=>{d.fx=e.x;d.fy=e.y;}).on('end',(e,d)=>{if(!e.active)sim.alphaTarget(0);d.fx=null;d.fy=null;}));
 sim.on('tick',()=>{link.attr('x1',d=>d.source.x).attr('y1',d=>d.source.y).attr('x2',d=>d.target.x).attr('y2',d=>d.target.y);node.attr('transform',d=>`translate(${d.x},${d.y})`);});
 
-// Auto-reload when MCP writes new snapshot. Only active for live /graphs/current view.
+// Auto-reload when MCP writes new snapshot.
+// Works for /graphs/current via HTTP. Skips file:// (no fetch possible).
 (function(){
-  if (!location.pathname.endsWith('/current')) return;
+  if (location.protocol === 'file:') {
+    const w = document.createElement('div');
+    w.style.cssText = 'position:fixed;bottom:8px;right:8px;background:#7c6af7;color:#fff;padding:6px 10px;border-radius:5px;font-size:11px;z-index:9999';
+    w.innerHTML = '⚠ Static file view — auto-refresh disabled. Open via <code>http://localhost:7865/graphs/current</code> for live updates.';
+    document.body.appendChild(w);
+    return;
+  }
   const initialTs = (D.meta && D.meta.ts) || 0;
+  const isCurrent = location.pathname.endsWith('/current') || location.pathname.endsWith('/current/');
+
+  // SSE first (real-time). Polling fallback.
+  let connected = false;
   try {
     const es = new EventSource('/api/stream');
     es.onmessage = (e) => {
+      connected = true;
       const d = JSON.parse(e.data);
       const ls = d.latest_snapshot;
-      if (ls && ls.ts && initialTs && ls.ts > initialTs) {
+      if (ls && ls.ts && initialTs && ls.ts > initialTs && isCurrent) {
         es.close();
         location.reload();
       }
     };
+    es.onerror = () => { es.close(); };
   } catch(e){}
+
+  // Fallback: poll latest.json every 3s
+  setInterval(async () => {
+    if (!isCurrent) return;
+    try {
+      const r = await fetch('/api/latest_snapshot', {cache:'no-store'});
+      const ls = await r.json();
+      if (ls && ls.ts && initialTs && ls.ts > initialTs) location.reload();
+    } catch(e){}
+  }, 3000);
 })();
 </script></body></html>"""

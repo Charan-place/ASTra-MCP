@@ -290,7 +290,10 @@ def serve_current():
     f = data_dir / "graphs" / "current.html"
     if not f.exists():
         return HTMLResponse("<h1>No graph yet. Run a query.</h1>", status_code=404)
-    return HTMLResponse(f.read_text())
+    return HTMLResponse(
+        f.read_text(),
+        headers={"Cache-Control": "no-store, no-cache, must-revalidate", "Pragma": "no-cache"},
+    )
 
 
 @app.get("/graphs/{snapshot_id}", response_class=HTMLResponse)
