@@ -80,15 +80,30 @@ def save_snapshot(
             try: old.unlink()
             except OSError: pass
 
-    # Sidecar JSON pointer
+    # Sidecar JSON pointer (now includes node_ids for live graph highlighting)
     (graphs_dir / "latest.json").write_text(json.dumps({
         "id": snapshot_id,
         "task": task,
         "ts": ts,
         "nodes": len(nodes),
         "edges": len(edges),
+        "node_ids": [n["id"] for n in nodes],
+        "seed_ids": [n["id"] for n in nodes if n.get("seed")],
         "source": meta.get("source", "mcp"),
     }))
+
+    # Append to query trail (last 5 queries kept)
+    trail_path = graphs_dir / "trail.json"
+    trail: list = []
+    if trail_path.exists():
+        try: trail = json.loads(trail_path.read_text())
+        except Exception: trail = []
+    trail.insert(0, {
+        "id": snapshot_id, "task": task, "ts": ts,
+        "node_ids": [n["id"] for n in nodes],
+        "source": meta.get("source", "mcp"),
+    })
+    trail_path.write_text(json.dumps(trail[:5]))
     return snapshot_id
 
 

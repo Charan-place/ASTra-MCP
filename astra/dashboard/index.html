@@ -167,6 +167,11 @@
   /* graph canvas */
   #graph-canvas { flex: 1; position: relative; overflow: hidden; background: var(--bg); }
   #graph-svg { width: 100%; height: 100%; }
+  @keyframes astra-pulse {
+    0%   { r: 5; opacity: 0.9; }
+    100% { r: 18; opacity: 0; }
+  }
+  circle.pulse { animation: astra-pulse 1.4s ease-out infinite; transform-origin: center; }
   .graph-controls { position: absolute; bottom: 16px; right: 16px; display: flex; gap: 8px; }
   .ctrl-btn { background: var(--surface); border: 1px solid var(--border); border-radius: 6px; color: var(--text2); cursor: pointer; font-size: 16px; width: 34px; height: 34px; display: flex; align-items: center; justify-content: center; transition: border-color 0.2s; }
   .ctrl-btn:hover { border-color: var(--accent); color: var(--accent); }
@@ -409,8 +414,25 @@ evtSource.onmessage = (e) => {
     _state.lastSnapshotTs = ls.ts;
     loadSavedGraphs();
     flashNewSnapshot(ls);
+    // Refresh trail & re-render graph with new highlights
+    refreshTrailAndRedraw();
   }
 };
+
+async function refreshTrailAndRedraw() {
+  if (!_graph.loaded) return;
+  try {
+    const r = await fetch('/api/query_trail', {cache:'no-store'});
+    const trail = await r.json();
+    _graph.trail = trail || [];
+    _graph.highlightIds = new Set((trail[0] && trail[0].node_ids) || []);
+    // Also refresh hierarchy in case new symbols indexed
+    const h = await fetch('/api/graph/hierarchy', {cache:'no-store'});
+    _graph.hierarchy = await h.json();
+    renderLevel();
+    renderBreadcrumb();
+  } catch(e){}
+}
 
 function flashNewSnapshot(ls) {
   const banner = document.getElementById('snapshot-flash');
@@ -546,67 +568,155 @@ function renderHistory(queries) {
   });
 }
 
-// ═══════════════════════════════════════════════════════ GRAPH VIZ
+// ═══════════════════════════════════════════════════════ GRAPH VIZ (3-level hierarchy)
 const _graph = {
-  loaded: false, data: null, simulation: null,
+  loaded: false, hierarchy: null, simulation: null,
   svg: null, zoom: null, g: null,
-  nodeMap: {}, selectedId: null,
+  level: 'folder',                  // 'folder' | 'file' | 'function'
+  focusFolder: null, focusFile: null,
+  highlightIds: new Set(),          // last-query nodes
+  seedIds: new Set(),               // last-query seeds
+  trail: [],                        // last 5 queries with their nodes
+  lastQueryTs: 0,
+  selectedId: null,
   visibleNodes: 0, visibleEdges: 0,
 };
 
 const NODE_COLOR = {
+  folder: '#a855f7',
   file: '#eab308',
   class: '#f97316',
   function: '#5eead4',
 };
-const NODE_RADIUS = { file: 8, class: 7, function: 5 };
+// trail decay colors — newest to oldest
+const TRAIL_COLORS = ['#ff3a8c', '#ff7a3a', '#fbbf24', '#94a3b8', '#475569'];
 
 async function loadGraph() {
   document.getElementById('graph-loading').style.display = 'flex';
   try {
-    const res = await fetch('/api/graph?limit=500');
-    const data = await res.json();
-    _graph.data = data;
+    const [hRes, tRes] = await Promise.all([
+      fetch('/api/graph/hierarchy'),
+      fetch('/api/query_trail'),
+    ]);
+    _graph.hierarchy = await hRes.json();
+    _graph.trail = await tRes.json() || [];
     _graph.loaded = true;
-    buildNodeMap(data.nodes);
-    renderGraph(data.nodes, data.edges);
-    setEl('g-node-count', fmt(data.nodes.length));
-    setEl('g-edge-count', fmt(data.edges.length));
-    _graph.visibleNodes = data.nodes.length;
-    _graph.visibleEdges = data.edges.length;
+    if (_graph.trail[0]) {
+      _graph.highlightIds = new Set(_graph.trail[0].node_ids || []);
+      _graph.lastQueryTs = _graph.trail[0].ts;
+    }
+    renderLevel();
+    renderBreadcrumb();
   } catch(e) {
     document.getElementById('graph-loading').textContent = 'Failed to load graph. Is dashboard running?';
   }
 }
 
-function buildNodeMap(nodes) {
-  _graph.nodeMap = {};
-  nodes.forEach(n => { _graph.nodeMap[n.id] = n; });
+function renderBreadcrumb() {
+  let el = document.getElementById('g-breadcrumb');
+  if (!el) {
+    const overlay = document.getElementById('graph-overlay');
+    el = document.createElement('div');
+    el.id = 'g-breadcrumb';
+    el.style.cssText = 'position:absolute;top:10px;left:10px;background:rgba(22,22,26,0.92);border:1px solid var(--border);padding:6px 10px;border-radius:6px;font-size:11px;display:flex;gap:6px;align-items:center;z-index:5';
+    document.getElementById('graph-canvas').appendChild(el);
+  }
+  const parts = [`<a onclick="zoomToLevel('folder')" style="cursor:pointer;color:var(--accent2)">📁 All folders</a>`];
+  if (_graph.focusFolder) parts.push(`<span style="color:var(--text3)">›</span><a onclick="zoomToLevel('file', '${_graph.focusFolder}')" style="cursor:pointer;color:var(--accent2)">${_graph.focusFolder}</a>`);
+  if (_graph.focusFile) parts.push(`<span style="color:var(--text3)">›</span><span style="color:var(--text1)">${_graph.focusFile.split('/').slice(-1)[0]}</span>`);
+  parts.push(`<span style="margin-left:8px;color:var(--text3);font-size:10px">level: <b style="color:var(--accent)">${_graph.level}</b></span>`);
+  el.innerHTML = parts.join(' ');
+}
+
+function zoomToLevel(level, target) {
+  _graph.level = level;
+  if (level === 'folder') { _graph.focusFolder = null; _graph.focusFile = null; }
+  else if (level === 'file') { _graph.focusFolder = target; _graph.focusFile = null; }
+  else if (level === 'function') { _graph.focusFile = target; }
+  renderLevel();
+  renderBreadcrumb();
+}
+
+function getLevelData() {
+  const h = _graph.hierarchy;
+  if (_graph.level === 'folder') {
+    return { nodes: h.folders.map(f => ({...f})), edges: h.folder_edges.map(e => ({...e})) };
+  }
+  if (_graph.level === 'file') {
+    const inFolder = h.files.filter(f => f.folder === _graph.focusFolder).map(f => ({...f}));
+    const ids = new Set(inFolder.map(f => f.id));
+    const edges = h.file_edges
+      .filter(e => ids.has(e.src) && ids.has(e.dst))
+      .map(e => ({...e}));
+    return { nodes: inFolder, edges };
+  }
+  // function level
+  const funcs = h.functions.filter(f => f.file === _graph.focusFile).map(f => ({...f}));
+  const ids = new Set(funcs.map(f => f.id));
+  const edges = h.func_edges
+    .filter(e => ids.has(e.src) && ids.has(e.dst))
+    .map(e => ({src: e.src, dst: e.dst, weight: 1}));
+  return { nodes: funcs, edges };
+}
+
+function relevanceColor(node) {
+  // newest-query node: bright pink. older trail: decay.
+  for (let i = 0; i < _graph.trail.length; i++) {
+    const trail = _graph.trail[i];
+    if ((trail.node_ids || []).includes(node.id)) {
+      return TRAIL_COLORS[Math.min(i, TRAIL_COLORS.length - 1)];
+    }
+    // also match aggregated levels (folder/file): check if any trail node lives in this folder/file
+    if (node.type === 'folder') {
+      if ((trail.node_ids || []).some(nid => _graph.hierarchy.functions.some(fn => fn.id === nid && fn.folder === node.name))) {
+        return TRAIL_COLORS[Math.min(i, TRAIL_COLORS.length - 1)];
+      }
+    }
+    if (node.type === 'file') {
+      if ((trail.node_ids || []).some(nid => _graph.hierarchy.functions.some(fn => fn.id === nid && fn.file === node.path))) {
+        return TRAIL_COLORS[Math.min(i, TRAIL_COLORS.length - 1)];
+      }
+    }
+  }
+  return null;
+}
+
+function renderLevel() {
+  const { nodes, edges } = getLevelData();
+  _graph.visibleNodes = nodes.length;
+  _graph.visibleEdges = edges.length;
+  setEl('g-node-count', fmt(nodes.length));
+  setEl('g-edge-count', fmt(edges.length));
+  renderGraph(nodes, edges);
+}
+
+function nodeRadius(d) {
+  if (d.type === 'folder') return 18 + Math.min(20, Math.sqrt(d.symbols || 1));
+  if (d.type === 'file')   return 8 + Math.min(10, Math.sqrt(d.symbols || 1));
+  return 5;
 }
 
 function renderGraph(nodes, edges) {
   const canvas = document.getElementById('graph-canvas');
   const W = canvas.clientWidth, H = canvas.clientHeight;
 
-  // clear previous
+  // Clear previous
   d3.select('#graph-svg').selectAll('*').remove();
-
   const svg = d3.select('#graph-svg');
   _graph.svg = svg;
 
-  // defs: arrowhead
-  svg.append('defs').append('marker')
-    .attr('id', 'arrow')
-    .attr('viewBox', '0 -4 8 8')
-    .attr('refX', 14).attr('refY', 0)
-    .attr('markerWidth', 5).attr('markerHeight', 5)
-    .attr('orient', 'auto')
-    .append('path')
-    .attr('d', 'M0,-4L8,0L0,4')
-    .attr('fill', '#3a3a4a');
+  // Arrowhead def — varies by relevance
+  const defs = svg.append('defs');
+  [['arrow', '#3a3a4a'], ['arrow-hi', '#7c6af7'], ['arrow-q', '#ff3a8c']].forEach(([id, c]) => {
+    defs.append('marker').attr('id', id)
+      .attr('viewBox', '0 -4 8 8')
+      .attr('refX', 16).attr('refY', 0)
+      .attr('markerWidth', 6).attr('markerHeight', 6)
+      .attr('orient', 'auto')
+      .append('path').attr('d', 'M0,-4L8,0L0,4').attr('fill', c);
+  });
 
-  const zoom = d3.zoom()
-    .scaleExtent([0.05, 4])
+  const zoom = d3.zoom().scaleExtent([0.05, 4])
     .on('zoom', (event) => { g.attr('transform', event.transform); });
   svg.call(zoom);
   _graph.zoom = zoom;
@@ -614,141 +724,221 @@ function renderGraph(nodes, edges) {
   const g = svg.append('g');
   _graph.g = g;
 
-  // build adjacency for highlight
-  const adj = {};
+  // Adjacency for hover-path highlight
+  const adj = {}, radj = {};
   edges.forEach(e => {
-    if (!adj[e.src]) adj[e.src] = new Set();
-    if (!adj[e.dst]) adj[e.dst] = new Set();
-    adj[e.src].add(e.dst);
-    adj[e.dst].add(e.src);
+    const s = e.src || (e.source && e.source.id) || e.source;
+    const d = e.dst || (e.target && e.target.id) || e.target;
+    (adj[s] = adj[s] || new Set()).add(d);
+    (radj[d] = radj[d] || new Set()).add(s);
   });
 
-  // links
-  const link = g.append('g').attr('class', 'links')
-    .selectAll('line')
-    .data(edges)
-    .join('line')
-    .attr('stroke', '#2a2a3a')
-    .attr('stroke-width', 1)
-    .attr('marker-end', 'url(#arrow)');
+  // Relevance map for this view: which nodes were picked by trail queries
+  const relevance = {};
+  nodes.forEach(n => { relevance[n.id] = relevanceColor(n); });
 
-  // node groups
+  // Edge weight scale
+  const maxW = Math.max(1, ...edges.map(e => e.weight || 1));
+  const edgeWidth = w => 0.8 + Math.min(5, Math.sqrt((w || 1) / maxW) * 4);
+
+  // Links — directed
+  const link = g.append('g').attr('class', 'links')
+    .selectAll('line').data(edges).join('line')
+    .attr('stroke', e => {
+      const s = e.src || e.source, d = e.dst || e.target;
+      const sid = typeof s === 'string' ? s : s.id;
+      const did = typeof d === 'string' ? d : d.id;
+      if (relevance[sid] && relevance[did]) return '#ff3a8c';
+      return '#2a2a3a';
+    })
+    .attr('stroke-width', e => edgeWidth(e.weight))
+    .attr('stroke-opacity', 0.6)
+    .attr('marker-end', e => {
+      const s = e.src || e.source, d = e.dst || e.target;
+      const sid = typeof s === 'string' ? s : s.id;
+      const did = typeof d === 'string' ? d : d.id;
+      return (relevance[sid] && relevance[did]) ? 'url(#arrow-q)' : 'url(#arrow)';
+    });
+
+  // Edge labels (call count, only for folder/file levels)
+  let edgeLabels = null;
+  if (_graph.level !== 'function') {
+    edgeLabels = g.append('g').attr('class', 'edge-labels')
+      .selectAll('text').data(edges.filter(e => (e.weight || 0) > 1))
+      .join('text')
+      .attr('font-size', 9)
+      .attr('fill', '#64748b')
+      .attr('text-anchor', 'middle')
+      .attr('pointer-events', 'none')
+      .text(d => `${d.weight} calls`);
+  }
+
+  // Node groups
   const node = g.append('g').attr('class', 'nodes')
-    .selectAll('g')
-    .data(nodes)
-    .join('g')
+    .selectAll('g').data(nodes).join('g')
     .attr('class', 'node-g')
     .style('cursor', 'pointer')
     .call(d3.drag()
-      .on('start', (event, d) => {
-        if (!event.active) _graph.simulation.alphaTarget(0.3).restart();
-        d.fx = d.x; d.fy = d.y;
-      })
-      .on('drag', (event, d) => { d.fx = event.x; d.fy = event.y; })
-      .on('end', (event, d) => {
-        if (!event.active) _graph.simulation.alphaTarget(0);
-        d.fx = null; d.fy = null;
-      })
+      .on('start', (event, d) => { if (!event.active) _graph.simulation.alphaTarget(0.3).restart(); d.fx = d.x; d.fy = d.y; })
+      .on('drag',  (event, d) => { d.fx = event.x; d.fy = event.y; })
+      .on('end',   (event, d) => { if (!event.active) _graph.simulation.alphaTarget(0); d.fx = null; d.fy = null; })
     );
 
-  // circle
-  node.append('circle')
-    .attr('r', d => NODE_RADIUS[d.type] || 5)
-    .attr('fill', d => NODE_COLOR[d.type] || '#7c6af7')
-    .attr('fill-opacity', 0.85)
-    .attr('stroke', d => NODE_COLOR[d.type] || '#7c6af7')
-    .attr('stroke-width', 1.5)
-    .attr('stroke-opacity', 0.5);
+  // Shape per type: folder=hex, file=rect, function=circle
+  node.each(function(d) {
+    const sel = d3.select(this);
+    const baseColor = NODE_COLOR[d.type] || '#7c6af7';
+    const queryColor = relevance[d.id];
+    const fill = queryColor || baseColor;
+    const r = nodeRadius(d);
+    if (d.type === 'folder') {
+      // hexagon-ish circle, big
+      sel.append('circle').attr('r', r).attr('fill', fill).attr('fill-opacity', 0.18)
+        .attr('stroke', fill).attr('stroke-width', 2);
+      sel.append('circle').attr('r', r * 0.35).attr('fill', fill).attr('fill-opacity', 0.9);
+    } else if (d.type === 'file') {
+      sel.append('rect')
+        .attr('x', -r).attr('y', -r * 0.7)
+        .attr('width', r * 2).attr('height', r * 1.4)
+        .attr('rx', 3).attr('ry', 3)
+        .attr('fill', fill).attr('fill-opacity', 0.85)
+        .attr('stroke', queryColor || baseColor).attr('stroke-width', queryColor ? 2 : 1);
+    } else {
+      sel.append('circle').attr('r', r)
+        .attr('fill', fill).attr('fill-opacity', queryColor ? 1 : 0.85)
+        .attr('stroke', queryColor || baseColor).attr('stroke-width', queryColor ? 2.5 : 1)
+        .attr('stroke-opacity', 0.7);
+      // pulse if it's in the latest query
+      if (_graph.highlightIds.has(d.id)) {
+        sel.append('circle').attr('r', r)
+          .attr('fill', 'none').attr('stroke', '#ff3a8c').attr('stroke-width', 2)
+          .attr('class', 'pulse');
+      }
+    }
+  });
 
-  // label (only for file + class nodes by default)
+  // Labels — adapt to level
   node.append('text')
-    .attr('dx', d => (NODE_RADIUS[d.type] || 5) + 4)
+    .attr('dx', d => nodeRadius(d) + 4)
     .attr('dy', '0.35em')
-    .attr('font-size', d => d.type === 'file' ? 11 : 9)
-    .attr('fill', d => d.type === 'file' ? '#eab308' : d.type === 'class' ? '#f97316' : '#64748b')
+    .attr('font-size', d => d.type === 'folder' ? 13 : d.type === 'file' ? 10 : 9)
+    .attr('font-weight', d => d.type === 'folder' ? 700 : 500)
+    .attr('fill', d => relevance[d.id] || (d.type === 'folder' ? '#a855f7' : d.type === 'file' ? '#eab308' : '#94a3b8'))
     .attr('pointer-events', 'none')
-    .text(d => d.type !== 'function' ? d.name : '');
+    .text(d => {
+      if (_graph.level === 'folder') return `${d.name}  (${d.files} files, ${d.symbols})`;
+      if (_graph.level === 'file')   return `${d.name}  (${d.symbols||0})`;
+      return d.name;
+    });
 
-  // tooltip
+  // Tooltip
   const tooltip = document.getElementById('g-tooltip');
-
   node.on('mouseover', (event, d) => {
-    tooltip.innerHTML = `<div class="t-name">${d.name}</div><div class="t-meta">${d.type} · ${d.file.split('/').slice(-1)[0]}</div>`;
+    let meta = '';
+    if (d.type === 'folder') meta = `${d.files} files · ${d.symbols} symbols`;
+    else if (d.type === 'file') meta = `${d.symbols||0} symbols · ${(d.path||'').split('/').slice(-2).join('/')}`;
+    else meta = `${d.type} · ${(d.file||'').split('/').slice(-1)[0]}:${d.line||'?'}`;
+    const hint = (d.type === 'folder') ? '<div style="color:#a78bfa;margin-top:4px">dbl-click → drill into files</div>' :
+                 (d.type === 'file')   ? '<div style="color:#fbbf24;margin-top:4px">dbl-click → drill into functions</div>' : '';
+    tooltip.innerHTML = `<div class="t-name">${d.name}</div><div class="t-meta">${meta}</div>${hint}`;
     tooltip.classList.add('visible');
+    pathHighlight(d.id, node, link, adj, radj);
   }).on('mousemove', (event) => {
     const rect = canvas.getBoundingClientRect();
     tooltip.style.left = (event.clientX - rect.left + 12) + 'px';
     tooltip.style.top  = (event.clientY - rect.top  - 10) + 'px';
   }).on('mouseout', () => {
     tooltip.classList.remove('visible');
+    resetPathHighlight(node, link);
   });
 
-  // click → highlight + detail panel
+  // Click + dblclick: click → details, dblclick → drill down
   node.on('click', (event, d) => {
     event.stopPropagation();
     _graph.selectedId = d.id;
-    highlightNode(d, node, link, adj);
-    showNodeDetail(d);
+    if (d.type === 'function') showNodeDetail(d);
+    else showAggregateDetail(d);
+  });
+  node.on('dblclick', (event, d) => {
+    event.stopPropagation();
+    if (d.type === 'folder') zoomToLevel('file', d.name);
+    else if (d.type === 'file') zoomToLevel('function', d.path);
   });
 
   svg.on('click', () => {
     _graph.selectedId = null;
-    resetHighlight(node, link);
-    document.getElementById('node-detail').innerHTML = '<div class="detail-empty">Click any node to explore its connections.</div>';
+    resetPathHighlight(node, link);
+    document.getElementById('node-detail').innerHTML = '<div class="detail-empty">Click any node to explore its connections. Dbl-click to drill down.</div>';
   });
 
-  // force simulation
+  // Forces tuned per level
+  const linkDist = _graph.level === 'folder' ? 180 : _graph.level === 'file' ? 90 : 55;
+  const charge   = _graph.level === 'folder' ? -400 : _graph.level === 'file' ? -180 : -80;
+
+  const linkForce = d3.forceLink(edges)
+    .id(d => d.id)
+    .distance(linkDist)
+    .strength(0.4);
+
+  // Map src/dst → source/target for d3 link force
+  edges.forEach(e => { e.source = e.src; e.target = e.dst; });
+
   const sim = d3.forceSimulation(nodes)
-    .force('link', d3.forceLink(edges).id(d => d.id).distance(60).strength(0.4))
-    .force('charge', d3.forceManyBody().strength(-80))
+    .force('link', linkForce)
+    .force('charge', d3.forceManyBody().strength(charge))
     .force('center', d3.forceCenter(W / 2, H / 2))
-    .force('collision', d3.forceCollide().radius(d => (NODE_RADIUS[d.type] || 5) + 3));
+    .force('collision', d3.forceCollide().radius(d => nodeRadius(d) + 4));
 
   _graph.simulation = sim;
 
   sim.on('tick', () => {
-    link
-      .attr('x1', d => d.source.x).attr('y1', d => d.source.y)
-      .attr('x2', d => d.target.x).attr('y2', d => d.target.y);
+    link.attr('x1', d => d.source.x).attr('y1', d => d.source.y)
+        .attr('x2', d => d.target.x).attr('y2', d => d.target.y);
+    if (edgeLabels) edgeLabels.attr('x', d => (d.source.x + d.target.x)/2)
+                              .attr('y', d => (d.source.y + d.target.y)/2);
     node.attr('transform', d => `translate(${d.x},${d.y})`);
   });
 
-  sim.on('end', () => {
-    document.getElementById('graph-loading').style.display = 'none';
-  });
-
-  // hide loading after brief delay even if sim doesn't "end"
+  sim.on('end', () => { document.getElementById('graph-loading').style.display = 'none'; });
   setTimeout(() => { document.getElementById('graph-loading').style.display = 'none'; }, 3000);
 }
 
-function highlightNode(d, node, link, adj) {
-  const neighbors = adj[d.id] || new Set();
-  node.selectAll('circle')
-    .attr('fill-opacity', n => n.id === d.id || neighbors.has(n.id) ? 1.0 : 0.12)
-    .attr('stroke-opacity', n => n.id === d.id || neighbors.has(n.id) ? 1.0 : 0.1)
-    .attr('r', n => n.id === d.id ? (NODE_RADIUS[n.type] || 5) * 1.8 : (NODE_RADIUS[n.type] || 5));
-  node.selectAll('text')
-    .attr('fill-opacity', n => n.id === d.id || neighbors.has(n.id) ? 1.0 : 0.1)
-    .text(n => (n.id === d.id || neighbors.has(n.id)) ? n.name : (n.type !== 'function' ? n.name : ''));
-  link
-    .attr('stroke', e => (e.source.id === d.id || e.target.id === d.id) ? '#7c6af7' : '#1e1e2a')
-    .attr('stroke-width', e => (e.source.id === d.id || e.target.id === d.id) ? 2 : 0.5)
-    .attr('stroke-opacity', e => (e.source.id === d.id || e.target.id === d.id) ? 0.9 : 0.2);
+function pathHighlight(id, node, link, adj, radj) {
+  const fwd = adj[id] || new Set();
+  const back = radj[id] || new Set();
+  const lit = new Set([id, ...fwd, ...back]);
+  node.style('opacity', n => lit.has(n.id) ? 1 : 0.18);
+  link.attr('stroke-opacity', e => {
+    const sid = e.source.id || e.source;
+    const did = e.target.id || e.target;
+    return (sid === id || did === id) ? 1 : 0.08;
+  });
+}
+function resetPathHighlight(node, link) {
+  node.style('opacity', 1);
+  link.attr('stroke-opacity', 0.6);
 }
 
-function resetHighlight(node, link) {
-  node.selectAll('circle')
-    .attr('fill-opacity', 0.85)
-    .attr('stroke-opacity', 0.5)
-    .attr('r', d => NODE_RADIUS[d.type] || 5);
-  node.selectAll('text')
-    .attr('fill-opacity', 1)
-    .text(d => d.type !== 'function' ? d.name : '');
-  link
-    .attr('stroke', '#2a2a3a')
-    .attr('stroke-width', 1)
-    .attr('stroke-opacity', 1);
+function showAggregateDetail(d) {
+  const panel = document.getElementById('node-detail');
+  if (d.type === 'folder') {
+    panel.innerHTML = `
+      <div class="detail-name">📁 ${d.name}</div>
+      <span class="detail-type" style="background:#a855f7">folder</span>
+      <div class="detail-sig">${d.files} files · ${d.symbols} symbols</div>
+      <div style="margin-top:12px"><button onclick="zoomToLevel('file', '${d.name}')" style="padding:6px 12px;background:var(--accent);color:#fff;border:none;border-radius:5px;cursor:pointer">Drill into files →</button></div>`;
+  } else if (d.type === 'file') {
+    panel.innerHTML = `
+      <div class="detail-name">📄 ${d.name}</div>
+      <span class="detail-type file">file</span>
+      <div class="detail-sig">${d.symbols||0} symbols</div>
+      <div class="detail-file">${d.path}</div>
+      <div style="margin-top:12px"><button onclick="zoomToLevel('function', '${d.path}')" style="padding:6px 12px;background:var(--accent);color:#fff;border:none;border-radius:5px;cursor:pointer">Drill into functions →</button></div>`;
+  }
 }
+
+// Legacy single-graph highlight functions removed in 3-level rewrite.
+// Path highlight now lives in pathHighlight/resetPathHighlight.
 
 async function showNodeDetail(d) {
   const panel = document.getElementById('node-detail');
@@ -797,34 +987,17 @@ async function showNodeDetail(d) {
 }
 
 function focusNodeById(id) {
-  if (!_graph.g) return;
-  const nodeData = _graph.data.nodes.find(n => n.id === id);
-  if (!nodeData) return;
-
-  // build adj map
-  const adj = {};
-  _graph.data.edges.forEach(e => {
-    if (!adj[e.src]) adj[e.src] = new Set();
-    if (!adj[e.dst]) adj[e.dst] = new Set();
-    adj[e.src].add(e.dst);
-    adj[e.dst].add(e.src);
-  });
-
-  const node = _graph.g.selectAll('.node-g');
-  const link = _graph.g.selectAll('line');
-  highlightNode(nodeData, node, link, adj);
-  showNodeDetail(nodeData);
-
-  // pan to node
-  const W = document.getElementById('graph-canvas').clientWidth;
-  const H = document.getElementById('graph-canvas').clientHeight;
-  const t = d3.zoomTransform(_graph.svg.node());
-  const targetX = W/2 - nodeData.x * t.k;
-  const targetY = H/2 - nodeData.y * t.k;
-  _graph.svg.transition().duration(500).call(
-    _graph.zoom.transform,
-    d3.zoomIdentity.translate(targetX, targetY).scale(t.k)
-  );
+  // Cross-level focus: locate file for a function id, switch to function level
+  if (!_graph.hierarchy) return;
+  const fn = _graph.hierarchy.functions.find(f => f.id === id);
+  if (fn) {
+    if (_graph.level !== 'function' || _graph.focusFile !== fn.file) {
+      zoomToLevel('function', fn.file);
+      // Defer highlight to next tick after render
+      setTimeout(() => focusNodeById(id), 200);
+      return;
+    }
+  }
 }
 
 function applyGraphFilter() {
@@ -832,28 +1005,17 @@ function applyGraphFilter() {
   if (!_graph.g) return;
   if (!q) { resetGraph(); return; }
 
-  const matching = new Set(
-    _graph.data.nodes
-      .filter(n => n.name.toLowerCase().includes(q) || n.file.toLowerCase().includes(q))
-      .map(n => n.id)
-  );
-
-  _graph.g.selectAll('.node-g').selectAll('circle')
-    .attr('fill-opacity', d => matching.has(d.id) ? 1 : 0.05)
-    .attr('stroke-opacity', d => matching.has(d.id) ? 1 : 0.03);
-  _graph.g.selectAll('.node-g').selectAll('text')
-    .attr('fill-opacity', d => matching.has(d.id) ? 1 : 0)
-    .text(d => matching.has(d.id) ? d.name : '');
-  _graph.g.selectAll('line')
-    .attr('stroke-opacity', e => (matching.has(e.source.id) && matching.has(e.target.id)) ? 0.6 : 0.03);
+  _graph.g.selectAll('.node-g')
+    .style('opacity', d => {
+      const hay = (d.name + ' ' + (d.path || d.file || '')).toLowerCase();
+      return hay.includes(q) ? 1 : 0.08;
+    });
 }
 
 function resetGraph() {
   document.getElementById('graph-filter').value = '';
   if (!_graph.g) return;
-  const node = _graph.g.selectAll('.node-g');
-  const link = _graph.g.selectAll('line');
-  resetHighlight(node, link);
+  _graph.g.selectAll('.node-g').style('opacity', 1);
 }
 
 function graphZoom(factor) {

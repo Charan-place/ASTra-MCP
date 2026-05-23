@@ -347,6 +347,101 @@ def api_graph(limit: int = 400, file: str = ""):
     return {"nodes": nodes, "edges": edges}
 
 
+@app.get("/api/graph/hierarchy")
+def api_graph_hierarchy():
+    """
+    Returns 3-level hierarchical graph: folders, files, functions.
+    Aggregates edges at each level (cross-folder, cross-file, function-level).
+    Used by the multi-zoom viz.
+    """
+    store = _get_store()
+    project_root = Path(os.environ.get("ASTRA_PROJECT", ".")).resolve()
+    with store._lock:
+        node_rows = store.conn.execute(
+            "SELECT id, name, type, file, line_start FROM nodes"
+        ).fetchall()
+        edge_rows = store.conn.execute(
+            "SELECT src, dst, relation FROM edges"
+        ).fetchall()
+
+    # Build node → file / folder mapping
+    def folder_of(p: str) -> str:
+        try:
+            rel = Path(p).resolve().relative_to(project_root)
+            parts = rel.parts
+            return parts[0] if len(parts) > 1 else "(root)"
+        except Exception:
+            return Path(p).parent.name or "(unknown)"
+
+    node_index = {}
+    folders: dict[str, dict] = {}
+    files: dict[str, dict] = {}
+    functions: list[dict] = []
+
+    for r in node_rows:
+        nid, name, ntype, fpath, line = r["id"], r["name"], r["type"], r["file"], r["line_start"]
+        fold = folder_of(fpath)
+        file_key = fpath
+
+        if fold not in folders:
+            folders[fold] = {"id": f"folder:{fold}", "name": fold, "type": "folder",
+                             "files": 0, "symbols": 0}
+        folders[fold]["symbols"] += 1
+
+        if ntype == "file":
+            if file_key not in files:
+                files[file_key] = {
+                    "id": f"file:{file_key}", "name": Path(file_key).name,
+                    "type": "file", "path": file_key, "folder": fold, "symbols": 0,
+                }
+                folders[fold]["files"] += 1
+        else:
+            # ensure file bucket exists even if file-type node missing
+            if file_key not in files:
+                files[file_key] = {
+                    "id": f"file:{file_key}", "name": Path(file_key).name,
+                    "type": "file", "path": file_key, "folder": fold, "symbols": 0,
+                }
+                folders[fold]["files"] += 1
+            files[file_key]["symbols"] += 1
+            functions.append({
+                "id": nid, "name": name, "type": ntype,
+                "file": file_key, "line": line,
+                "folder": fold,
+            })
+
+        node_index[nid] = {"file": file_key, "folder": fold, "type": ntype, "name": name}
+
+    # Aggregate edges by level
+    folder_edges: dict[tuple, int] = {}
+    file_edges: dict[tuple, int] = {}
+    func_edges: list[dict] = []
+
+    for e in edge_rows:
+        s, d = node_index.get(e["src"]), node_index.get(e["dst"])
+        if not s or not d:
+            continue
+        if s["folder"] != d["folder"]:
+            key = (s["folder"], d["folder"])
+            folder_edges[key] = folder_edges.get(key, 0) + 1
+        if s["file"] != d["file"]:
+            key = (s["file"], d["file"])
+            file_edges[key] = file_edges.get(key, 0) + 1
+        func_edges.append({"src": e["src"], "dst": e["dst"], "relation": e["relation"]})
+
+    return {
+        "folders": list(folders.values()),
+        "files": list(files.values()),
+        "functions": functions,
+        "folder_edges": [{"src": f"folder:{a}", "dst": f"folder:{b}", "weight": w}
+                         for (a, b), w in folder_edges.items()],
+        "file_edges": [{"src": f"file:{a}", "dst": f"file:{b}", "weight": w}
+                       for (a, b), w in file_edges.items()],
+        "func_edges": func_edges,
+        "project_root": str(project_root),
+    }
+
+
 @app.get("/api/graph/node/{node_id:path}")
 def api_graph_node(node_id: str):
     """Return full node detail + callers + callees."""
@@ -384,6 +479,19 @@ def _read_latest_snapshot() -> dict | None:
 @app.get("/api/latest_snapshot")
 def api_latest_snapshot():
     return _read_latest_snapshot() or {}
+
+
+@app.get("/api/query_trail")
+def api_query_trail():
+    """Last 5 queries with their node IDs — used to color-code multi-zoom graph."""
+    data_dir = Path(os.environ.get("ASTRA_DATA_DIR", ".astra"))
+    f = data_dir / "graphs" / "trail.json"
+    if not f.exists():
+        return []
+    try:
+        return json.loads(f.read_text())
+    except Exception:
+        return []
 
 
 @app.get("/api/stream")
