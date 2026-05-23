@@ -1,12 +1,16 @@
 """All 7 MCP tool handlers. Pure functions, no server state here."""
-import uuid
+import logging
 import time
+import uuid
 from pathlib import Path
 
 from astra.graph.store import GraphStore
 from astra.query.engine import get_context, search_symbols
 from astra.query.serializer import build_context
 from astra.memory.session import SessionMemory
+from astra.dashboard.snapshot import save_snapshot
+
+logger = logging.getLogger("astra.mcp.tools")
 
 
 def tool_get_context(
@@ -18,11 +22,27 @@ def tool_get_context(
     Main tool: task description → minimal relevant code context.
     This is the primary token-saving tool.
     """
+    t0 = time.perf_counter()
     result = get_context(store, task, max_tokens=max_tokens)
+    latency_ms = round((time.perf_counter() - t0) * 1000, 1)
+
+    snapshot_id = ""
+    try:
+        snapshot_id = save_snapshot(store, task, result, entry={
+            "astra_tokens": result["tokens"],
+            "naive_tokens": 0,
+            "reduction_pct": 0,
+            "latency_ms": latency_ms,
+            "source": "mcp:get_context",
+        })
+    except Exception as e:
+        logger.warning("snapshot write failed: %s", e)
+
     return {
         "context": result["context"],
         "token_estimate": result["tokens"],
         "symbols_included": result["nodes"],
+        "snapshot": snapshot_id,
         "usage": f"Injected ~{result['tokens']} tokens (vs full codebase read)",
     }
 
@@ -34,6 +54,23 @@ def tool_search(
 ) -> list[dict]:
     """Semantic symbol search across entire indexed codebase."""
     results = search_symbols(store, query, top_k=top_k)
+
+    # Also save a snapshot for visual feedback
+    try:
+        node_ids = [r["id"] for r in results if "id" in r]
+        if node_ids:
+            save_snapshot(store, f"search: {query}", {
+                "node_ids": node_ids,
+                "seeds": node_ids[:3],
+                "tokens": 0,
+            }, entry={
+                "astra_tokens": 0, "naive_tokens": 0,
+                "reduction_pct": 0, "latency_ms": 0,
+                "source": "mcp:search",
+            })
+    except Exception as e:
+        logger.warning("snapshot write failed: %s", e)
+
     return [
         {
             "name": r["name"],

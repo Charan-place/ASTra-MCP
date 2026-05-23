@@ -286,6 +286,7 @@
       Saved Query Graphs
       <span style="margin-left:auto;font-size:10px;color:var(--text3);text-transform:none;letter-spacing:0">stored in <code>.astra/graphs/</code></span>
     </div>
+    <div id="snapshot-flash" style="display:none;margin-bottom:10px;padding:8px 12px;background:rgba(124,106,247,0.12);border:1px solid var(--accent);border-radius:6px;font-size:12px;color:var(--text1)"></div>
     <div id="saved-graphs" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:8px;max-height:280px;overflow-y:auto">
       <div style="color:var(--text3);font-size:12px">No saved graphs yet. Run a query above.</div>
     </div>
@@ -382,7 +383,7 @@ function switchTab(name, el) {
 
 // ═══════════════════════════════════════════════════════ DASHBOARD
 const API = '';
-const _state = { totalSaved: 0, queryCount: 0 };
+const _state = { totalSaved: 0, queryCount: 0, lastSnapshotTs: 0 };
 
 const evtSource = new EventSource(`${API}/api/stream`);
 evtSource.onmessage = (e) => {
@@ -402,7 +403,23 @@ evtSource.onmessage = (e) => {
     setEl('g-node-count', fmt(_graph.visibleNodes));
     setEl('g-edge-count', fmt(_graph.visibleEdges));
   }
+  // Auto-refresh saved graphs list when MCP tool writes new snapshot
+  const ls = d.latest_snapshot;
+  if (ls && ls.ts && ls.ts > _state.lastSnapshotTs) {
+    _state.lastSnapshotTs = ls.ts;
+    loadSavedGraphs();
+    flashNewSnapshot(ls);
+  }
 };
+
+function flashNewSnapshot(ls) {
+  const banner = document.getElementById('snapshot-flash');
+  if (!banner) return;
+  banner.style.display = 'block';
+  banner.innerHTML = `🆕 New graph from <b>${ls.source||'mcp'}</b>: "${(ls.task||'').slice(0,50)}" · ${ls.nodes} nodes <a href="/graphs/current" target="astra-graph" style="color:var(--accent);margin-left:8px">open live ↗</a>`;
+  clearTimeout(window._flashT);
+  window._flashT = setTimeout(()=>{banner.style.display='none';}, 8000);
+}
 
 fetch(`${API}/api/stats`).then(r=>r.json()).then(d => {
   setEl('stat-nodes', fmt(d.graph.nodes));
@@ -448,9 +465,12 @@ async function loadSavedGraphs() {
     if (!items.length) { el.innerHTML = '<div style="color:var(--text3);font-size:12px">No saved graphs yet. Run a query above.</div>'; return; }
     el.innerHTML = items.map(g => {
       const dt = g.ts ? new Date(g.ts * 1000).toLocaleString() : '';
-      return `<a href="/graphs/${g.id}" target="_blank" style="text-decoration:none">
-        <div style="background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:10px 12px;cursor:pointer;transition:border-color .2s" onmouseover="this.style.borderColor='var(--accent)'" onmouseout="this.style.borderColor='var(--border)'">
-          <div style="font-size:12px;color:var(--accent2);font-weight:600">🕸 ${g.task || g.id}</div>
+      const tgt = g.is_current ? 'astra-graph' : '_blank';
+      const badge = g.is_current ? '<span style="background:var(--accent);color:#fff;padding:1px 6px;border-radius:3px;font-size:9px;margin-right:6px">LIVE</span>' : '';
+      const border = g.is_current ? 'var(--accent)' : 'var(--border)';
+      return `<a href="/graphs/${g.id}" target="${tgt}" style="text-decoration:none">
+        <div style="background:var(--surface2);border:1px solid ${border};border-radius:6px;padding:10px 12px;cursor:pointer;transition:border-color .2s" onmouseover="this.style.borderColor='var(--accent)'" onmouseout="this.style.borderColor='${border}'">
+          <div style="font-size:12px;color:var(--accent2);font-weight:600">${badge}🕸 ${g.task || g.id}</div>
           <div style="font-size:10px;color:var(--text3);margin-top:4px">${dt}</div>
         </div></a>`;
     }).join('');

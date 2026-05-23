@@ -259,26 +259,50 @@ sim.on('tick',()=>{link.attr('x1',d=>d.source.x).attr('y1',d=>d.source.y).attr('
 
 @app.get("/api/graphs")
 def api_graphs():
-    """List all saved query graph snapshots."""
+    """List history ring buffer + current."""
     data_dir = Path(os.environ.get("ASTRA_DATA_DIR", ".astra"))
     graphs_dir = data_dir / "graphs"
     if not graphs_dir.exists():
         return []
     items = []
-    for f in sorted(graphs_dir.glob("*.html"), reverse=True):
-        ts_str, _, name = f.stem.partition("_")
-        try: ts = int(ts_str)
-        except ValueError: ts = 0
-        items.append({"id": f.stem, "task": name.replace("_", " "), "ts": ts, "path": str(f)})
+    current = graphs_dir / "current.html"
+    if current.exists():
+        latest = _read_latest_snapshot() or {}
+        items.append({
+            "id": "current",
+            "task": latest.get("task", "current"),
+            "ts": latest.get("ts", int(current.stat().st_mtime)),
+            "is_current": True,
+        })
+    hist_dir = graphs_dir / "history"
+    if hist_dir.exists():
+        for f in sorted(hist_dir.glob("*.html"), key=lambda p: p.stat().st_mtime, reverse=True):
+            ts_str, _, name = f.stem.partition("_")
+            try: ts = int(ts_str)
+            except ValueError: ts = 0
+            items.append({"id": f.stem, "task": name.replace("_", " "), "ts": ts, "is_current": False})
     return items
+
+
+@app.get("/graphs/current", response_class=HTMLResponse)
+def serve_current():
+    data_dir = Path(os.environ.get("ASTRA_DATA_DIR", ".astra"))
+    f = data_dir / "graphs" / "current.html"
+    if not f.exists():
+        return HTMLResponse("<h1>No graph yet. Run a query.</h1>", status_code=404)
+    return HTMLResponse(f.read_text())
 
 
 @app.get("/graphs/{snapshot_id}", response_class=HTMLResponse)
 def serve_snapshot(snapshot_id: str):
-    """Serve a saved graph snapshot."""
+    """Serve historical snapshot from history ring."""
     data_dir = Path(os.environ.get("ASTRA_DATA_DIR", ".astra"))
-    f = data_dir / "graphs" / f"{snapshot_id}.html"
+    f = data_dir / "graphs" / "history" / f"{snapshot_id}.html"
     if not f.exists():
+        # Back-compat: try flat path
+        flat = data_dir / "graphs" / f"{snapshot_id}.html"
+        if flat.exists():
+            return HTMLResponse(flat.read_text())
         return HTMLResponse("<h1>Snapshot not found</h1>", status_code=404)
     return HTMLResponse(f.read_text())
 
@@ -343,9 +367,25 @@ def api_search(q: str = "", k: int = 10):
     return search_symbols(store, q, top_k=k)
 
 
+def _read_latest_snapshot() -> dict | None:
+    data_dir = Path(os.environ.get("ASTRA_DATA_DIR", ".astra"))
+    f = data_dir / "graphs" / "latest.json"
+    if not f.exists():
+        return None
+    try:
+        return json.loads(f.read_text())
+    except Exception:
+        return None
+
+
+@app.get("/api/latest_snapshot")
+def api_latest_snapshot():
+    return _read_latest_snapshot() or {}
+
+
 @app.get("/api/stream")
 async def api_stream():
-    """SSE stream: push stats every 2 seconds."""
+    """SSE stream: push stats every 2 seconds. Includes latest snapshot pointer."""
     async def generator() -> AsyncGenerator[str, None]:
         while True:
             store = _get_store()
@@ -357,6 +397,7 @@ async def api_stream():
                 "total_saved": _state["total_saved"],
                 "query_count": len(_state["queries"]),
                 "last_query": _state["queries"][-1] if _state["queries"] else None,
+                "latest_snapshot": _read_latest_snapshot(),
             })
             yield f"data: {payload}\n\n"
             await asyncio.sleep(2)
