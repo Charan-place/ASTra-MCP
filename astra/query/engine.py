@@ -81,6 +81,7 @@ def get_context(
         "tokens": token_count,
         "nodes": len(merged),
         "seeds": seed_ids,
+        "node_ids": [nid for nid, _ in merged],
     }
 
 

@@ -280,6 +280,17 @@
     </div>
   </div>
 
+  <div class="card">
+    <div class="card-title">
+      <span class="dot" style="background:var(--accent2)"></span>
+      Saved Query Graphs
+      <span style="margin-left:auto;font-size:10px;color:var(--text3);text-transform:none;letter-spacing:0">stored in <code>.astra/graphs/</code></span>
+    </div>
+    <div id="saved-graphs" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:8px;max-height:280px;overflow-y:auto">
+      <div style="color:var(--text3);font-size:12px">No saved graphs yet. Run a query above.</div>
+    </div>
+  </div>
+
   <div class="grid2">
     <div class="card">
       <div class="card-title"><span class="dot" style="background:var(--accent)"></span>Query History</div>
@@ -425,8 +436,27 @@ async function runQuery() {
     setEl('last-latency', `${d.latency_ms}ms`);
     _state.totalSaved += (d.naive_tokens - d.astra_tokens);
     setEl('tokens-saved', fmt(_state.totalSaved));
+    loadSavedGraphs();
   } finally { btn.disabled = false; btn.textContent = 'Run ▶'; }
 }
+
+async function loadSavedGraphs() {
+  try {
+    const res = await fetch(`${API}/api/graphs`);
+    const items = await res.json();
+    const el = document.getElementById('saved-graphs');
+    if (!items.length) { el.innerHTML = '<div style="color:var(--text3);font-size:12px">No saved graphs yet. Run a query above.</div>'; return; }
+    el.innerHTML = items.map(g => {
+      const dt = g.ts ? new Date(g.ts * 1000).toLocaleString() : '';
+      return `<a href="/graphs/${g.id}" target="_blank" style="text-decoration:none">
+        <div style="background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:10px 12px;cursor:pointer;transition:border-color .2s" onmouseover="this.style.borderColor='var(--accent)'" onmouseout="this.style.borderColor='var(--border)'">
+          <div style="font-size:12px;color:var(--accent2);font-weight:600">🕸 ${g.task || g.id}</div>
+          <div style="font-size:10px;color:var(--text3);margin-top:4px">${dt}</div>
+        </div></a>`;
+    }).join('');
+  } catch(e) {}
+}
+loadSavedGraphs();
 document.getElementById('task-input').addEventListener('keydown', e => { if (e.key === 'Enter') runQuery(); });
 
 async function runSearch() {
