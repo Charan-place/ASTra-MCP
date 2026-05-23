@@ -1,0 +1,15 @@
+{
+  "name": "astra-mcp",
+  "owner": {
+    "name": "Satya Sai Charan",
+    "url": "https://github.com/YOUR_GITHUB_USERNAME"
+  },
+  "plugins": [
+    {
+      "name": "astra",
+      "description": "AST-powered codebase memory for AI coding agents. Parses your codebase into a knowledge graph and injects only relevant context — 93% token reduction, 51ms latency.",
+      "source": "./",
+      "version": "0.1.0"
+    }
+  ]
+}
