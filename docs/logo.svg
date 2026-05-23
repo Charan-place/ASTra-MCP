@@ -1,0 +1,118 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 400" width="400" height="400" style="background:transparent">
+  <defs>
+    <radialGradient id="core" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#a78bfa" stop-opacity="1"/>
+      <stop offset="60%" stop-color="#7c6af7" stop-opacity="1"/>
+      <stop offset="100%" stop-color="#5b21b6" stop-opacity="0.95"/>
+    </radialGradient>
+    <radialGradient id="glow" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#7c6af7" stop-opacity="0.55"/>
+      <stop offset="100%" stop-color="#7c6af7" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="strand" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#5eead4" stop-opacity="0.95"/>
+      <stop offset="100%" stop-color="#7c6af7" stop-opacity="0.95"/>
+    </linearGradient>
+    <linearGradient id="strand-hot" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#ff3a8c" stop-opacity="1"/>
+      <stop offset="100%" stop-color="#7c6af7" stop-opacity="1"/>
+    </linearGradient>
+    <filter id="bloom" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="6" result="b"/>
+      <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+  </defs>
+
+  <!-- Outer glow halo -->
+  <circle cx="200" cy="200" r="180" fill="url(#glow)">
+    <animate attributeName="r" values="170;185;170" dur="4s" repeatCount="indefinite"/>
+    <animate attributeName="opacity" values="0.5;0.8;0.5" dur="4s" repeatCount="indefinite"/>
+  </circle>
+
+  <!-- ── WEB STRANDS — radial from center ── -->
+  <g stroke="url(#strand)" stroke-width="1.4" fill="none" opacity="0.7" filter="url(#bloom)">
+    <!-- 8 radial strands -->
+    <line x1="200" y1="200" x2="200" y2="50"/>
+    <line x1="200" y1="200" x2="306" y2="93"/>
+    <line x1="200" y1="200" x2="350" y2="200"/>
+    <line x1="200" y1="200" x2="306" y2="307"/>
+    <line x1="200" y1="200" x2="200" y2="350"/>
+    <line x1="200" y1="200" x2="93"  y2="307"/>
+    <line x1="200" y1="200" x2="50"  y2="200"/>
+    <line x1="200" y1="200" x2="93"  y2="93"/>
+  </g>
+
+  <!-- ── Concentric web rings (octagonal) ── -->
+  <g fill="none" stroke="url(#strand)" stroke-width="1.2" opacity="0.55" filter="url(#bloom)">
+    <!-- inner ring -->
+    <polygon points="200,140 242,158 260,200 242,242 200,260 158,242 140,200 158,158" />
+    <!-- middle ring -->
+    <polygon points="200,90 277,123 310,200 277,277 200,310 123,277 90,200 123,123" />
+    <!-- outer ring -->
+    <polygon points="200,55 303,97 345,200 303,303 200,345 97,303 55,200 97,97" />
+  </g>
+
+  <!-- ── Pulse strand — represents query/migration ── -->
+  <line x1="200" y1="200" stroke="url(#strand-hot)" stroke-width="2.2" stroke-linecap="round" filter="url(#bloom)">
+    <animate attributeName="x2" values="200;306;350;306;200;93;50;93;200" dur="8s" repeatCount="indefinite"/>
+    <animate attributeName="y2" values="50;93;200;307;350;307;200;93;50" dur="8s" repeatCount="indefinite"/>
+    <animate attributeName="stroke-opacity" values="0.2;1;0.2" dur="1s" repeatCount="indefinite"/>
+  </line>
+
+  <!-- ── Outer ring nodes (8 cardinal points) ── -->
+  <g fill="#5eead4" filter="url(#bloom)">
+    <circle cx="200" cy="55"  r="6"><animate attributeName="r" values="5;8;5" dur="3s" repeatCount="indefinite"/></circle>
+    <circle cx="303" cy="97"  r="6"><animate attributeName="r" values="5;8;5" dur="3s" begin="0.4s" repeatCount="indefinite"/></circle>
+    <circle cx="345" cy="200" r="6"><animate attributeName="r" values="5;8;5" dur="3s" begin="0.8s" repeatCount="indefinite"/></circle>
+    <circle cx="303" cy="303" r="6"><animate attributeName="r" values="5;8;5" dur="3s" begin="1.2s" repeatCount="indefinite"/></circle>
+    <circle cx="200" cy="345" r="6"><animate attributeName="r" values="5;8;5" dur="3s" begin="1.6s" repeatCount="indefinite"/></circle>
+    <circle cx="97"  cy="303" r="6"><animate attributeName="r" values="5;8;5" dur="3s" begin="2.0s" repeatCount="indefinite"/></circle>
+    <circle cx="55"  cy="200" r="6"><animate attributeName="r" values="5;8;5" dur="3s" begin="2.4s" repeatCount="indefinite"/></circle>
+    <circle cx="97"  cy="97"  r="6"><animate attributeName="r" values="5;8;5" dur="3s" begin="2.8s" repeatCount="indefinite"/></circle>
+  </g>
+
+  <!-- ── Middle ring nodes ── -->
+  <g fill="#a78bfa" opacity="0.85">
+    <circle cx="200" cy="90"  r="4"/>
+    <circle cx="277" cy="123" r="4"/>
+    <circle cx="310" cy="200" r="4"/>
+    <circle cx="277" cy="277" r="4"/>
+    <circle cx="200" cy="310" r="4"/>
+    <circle cx="123" cy="277" r="4"/>
+    <circle cx="90"  cy="200" r="4"/>
+    <circle cx="123" cy="123" r="4"/>
+  </g>
+
+  <!-- ── Inner ring nodes ── -->
+  <g fill="#7c6af7">
+    <circle cx="200" cy="140" r="3"/>
+    <circle cx="242" cy="158" r="3"/>
+    <circle cx="260" cy="200" r="3"/>
+    <circle cx="242" cy="242" r="3"/>
+    <circle cx="200" cy="260" r="3"/>
+    <circle cx="158" cy="242" r="3"/>
+    <circle cx="140" cy="200" r="3"/>
+    <circle cx="158" cy="158" r="3"/>
+  </g>
+
+  <!-- ── Central CORE — the brain ── -->
+  <circle cx="200" cy="200" r="36" fill="url(#core)" filter="url(#bloom)">
+    <animate attributeName="r" values="34;40;34" dur="3s" repeatCount="indefinite"/>
+  </circle>
+
+  <!-- AST stylized glyph inside core: 3 dots forming tree fork -->
+  <g fill="#fff" filter="url(#bloom)">
+    <circle cx="200" cy="186" r="3.5"/>
+    <circle cx="188" cy="210" r="3.5"/>
+    <circle cx="212" cy="210" r="3.5"/>
+    <line x1="200" y1="186" x2="188" y2="210" stroke="#fff" stroke-width="1.6"/>
+    <line x1="200" y1="186" x2="212" y2="210" stroke="#fff" stroke-width="1.6"/>
+  </g>
+
+  <!-- Migrating signal dot — circles around the web following pulse strand -->
+  <circle r="5" fill="#ff3a8c" filter="url(#bloom)">
+    <animate attributeName="cx" values="200;306;350;306;200;93;50;93;200" dur="8s" repeatCount="indefinite"/>
+    <animate attributeName="cy" values="50;93;200;307;350;307;200;93;50" dur="8s" repeatCount="indefinite"/>
+    <animate attributeName="r" values="4;7;4" dur="0.5s" repeatCount="indefinite"/>
+  </circle>
+</svg>

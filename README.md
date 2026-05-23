@@ -1,8 +1,8 @@
 <div align="center">
 
-<img src="https://img.shields.io/badge/ASTra-MCP-7c6af7?style=for-the-badge&logo=data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0iI2ZmZiI+PHBhdGggZD0iTTEyIDJsLTcgN2gxNHptMCAyMGw3LTdoLTE0eiIvPjwvc3ZnPg==" alt="ASTra MCP" height="60"/>
+<img src="docs/logo.svg" alt="ASTra MCP" width="180"/>
 
-# 🕸️ ASTra MCP
+# ASTra MCP
 
 ### **Permanent Code Memory for AI Coding Assistants**
 

@@ -1,0 +1,133 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1280 640" width="1280" height="640">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0a0a0f"/>
+      <stop offset="50%" stop-color="#13131a"/>
+      <stop offset="100%" stop-color="#0a0a0f"/>
+    </linearGradient>
+    <radialGradient id="bg-glow" cx="80%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#7c6af7" stop-opacity="0.18"/>
+      <stop offset="100%" stop-color="#7c6af7" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="core2" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#a78bfa"/>
+      <stop offset="100%" stop-color="#5b21b6"/>
+    </radialGradient>
+    <linearGradient id="title-grad" x1="0%" x2="100%">
+      <stop offset="0%" stop-color="#7c6af7"/>
+      <stop offset="50%" stop-color="#5eead4"/>
+      <stop offset="100%" stop-color="#ff3a8c"/>
+    </linearGradient>
+    <linearGradient id="strand2" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#5eead4" stop-opacity="0.7"/>
+      <stop offset="100%" stop-color="#7c6af7" stop-opacity="0.7"/>
+    </linearGradient>
+    <filter id="bloom2" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="8" result="b"/>
+      <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+  </defs>
+
+  <rect width="1280" height="640" fill="url(#bg)"/>
+  <rect width="1280" height="640" fill="url(#bg-glow)"/>
+
+  <!-- Decorative dot grid -->
+  <g fill="#2a2a35">
+    <!-- columns × rows of small dots -->
+    <!-- generated procedurally would be cleaner but inline is fine -->
+  </g>
+
+  <!-- ── LEFT: Title block ── -->
+  <g font-family="-apple-system, BlinkMacSystemFont, 'SF Mono', monospace">
+    <text x="80" y="200" font-size="92" font-weight="800" fill="url(#title-grad)">ASTra</text>
+    <text x="80" y="260" font-size="32" font-weight="600" fill="#94a3b8" letter-spacing="2">MCP · Code Memory for AI</text>
+
+    <!-- Stat blocks -->
+    <g font-size="14" fill="#64748b">
+      <rect x="80"  y="320" width="220" height="86" rx="10" fill="#16161a" stroke="#2a2a35"/>
+      <text x="100" y="350" font-size="13" fill="#5eead4" font-weight="700">TOKEN REDUCTION</text>
+      <text x="100" y="392" font-size="42" font-weight="800" fill="#ff3a8c">98.9%</text>
+
+      <rect x="320" y="320" width="220" height="86" rx="10" fill="#16161a" stroke="#2a2a35"/>
+      <text x="340" y="350" font-size="13" fill="#5eead4" font-weight="700">QUERY LATENCY</text>
+      <text x="340" y="392" font-size="42" font-weight="800" fill="#5eead4">&lt;100ms</text>
+
+      <rect x="80"  y="430" width="460" height="86" rx="10" fill="#16161a" stroke="#2a2a35"/>
+      <text x="100" y="460" font-size="13" fill="#5eead4" font-weight="700">WORKS WITH</text>
+      <text x="100" y="495" font-size="20" font-weight="700" fill="#e2e8f0">Claude Code · Cursor · Codex · Any MCP client</text>
+    </g>
+
+    <text x="80" y="565" font-size="13" fill="#475569">github.com/Charan-place/ASTra-MCP · Apache 2.0</text>
+  </g>
+
+  <!-- ── RIGHT: Logo glyph ── -->
+  <g transform="translate(900, 320)">
+    <!-- Halo -->
+    <circle r="220" fill="#7c6af7" fill-opacity="0.06"/>
+    <circle r="180" fill="#7c6af7" fill-opacity="0.08"/>
+
+    <!-- Radial strands -->
+    <g stroke="url(#strand2)" stroke-width="1.8" fill="none" filter="url(#bloom2)">
+      <line x2="0"    y2="-180"/>
+      <line x2="127"  y2="-127"/>
+      <line x2="180"  y2="0"/>
+      <line x2="127"  y2="127"/>
+      <line x2="0"    y2="180"/>
+      <line x2="-127" y2="127"/>
+      <line x2="-180" y2="0"/>
+      <line x2="-127" y2="-127"/>
+    </g>
+
+    <!-- Concentric rings -->
+    <g fill="none" stroke="url(#strand2)" stroke-width="1.4" filter="url(#bloom2)">
+      <polygon points="0,-180 127,-127 180,0 127,127 0,180 -127,127 -180,0 -127,-127"/>
+      <polygon points="0,-120 85,-85 120,0 85,85 0,120 -85,85 -120,0 -85,-85"/>
+      <polygon points="0,-60 42,-42 60,0 42,42 0,60 -42,42 -60,0 -42,-42"/>
+    </g>
+
+    <!-- Pulse strand -->
+    <line x1="0" y1="0" stroke="#ff3a8c" stroke-width="2.5" stroke-linecap="round" filter="url(#bloom2)">
+      <animate attributeName="x2" values="0;127;180;127;0;-127;-180;-127;0" dur="8s" repeatCount="indefinite"/>
+      <animate attributeName="y2" values="-180;-127;0;127;180;127;0;-127;-180" dur="8s" repeatCount="indefinite"/>
+    </line>
+
+    <!-- Outer nodes -->
+    <g fill="#5eead4" filter="url(#bloom2)">
+      <circle cx="0"    cy="-180" r="8"><animate attributeName="r" values="6;10;6" dur="3s" repeatCount="indefinite"/></circle>
+      <circle cx="127"  cy="-127" r="8"><animate attributeName="r" values="6;10;6" dur="3s" begin="0.4s" repeatCount="indefinite"/></circle>
+      <circle cx="180"  cy="0"    r="8"><animate attributeName="r" values="6;10;6" dur="3s" begin="0.8s" repeatCount="indefinite"/></circle>
+      <circle cx="127"  cy="127"  r="8"><animate attributeName="r" values="6;10;6" dur="3s" begin="1.2s" repeatCount="indefinite"/></circle>
+      <circle cx="0"    cy="180"  r="8"><animate attributeName="r" values="6;10;6" dur="3s" begin="1.6s" repeatCount="indefinite"/></circle>
+      <circle cx="-127" cy="127"  r="8"><animate attributeName="r" values="6;10;6" dur="3s" begin="2.0s" repeatCount="indefinite"/></circle>
+      <circle cx="-180" cy="0"    r="8"><animate attributeName="r" values="6;10;6" dur="3s" begin="2.4s" repeatCount="indefinite"/></circle>
+      <circle cx="-127" cy="-127" r="8"><animate attributeName="r" values="6;10;6" dur="3s" begin="2.8s" repeatCount="indefinite"/></circle>
+    </g>
+
+    <!-- Middle nodes -->
+    <g fill="#a78bfa">
+      <circle cx="0" cy="-120" r="5"/><circle cx="85" cy="-85" r="5"/>
+      <circle cx="120" cy="0" r="5"/><circle cx="85" cy="85" r="5"/>
+      <circle cx="0" cy="120" r="5"/><circle cx="-85" cy="85" r="5"/>
+      <circle cx="-120" cy="0" r="5"/><circle cx="-85" cy="-85" r="5"/>
+    </g>
+
+    <!-- Core brain -->
+    <circle r="46" fill="url(#core2)" filter="url(#bloom2)">
+      <animate attributeName="r" values="42;50;42" dur="3s" repeatCount="indefinite"/>
+    </circle>
+    <g fill="#fff" filter="url(#bloom2)">
+      <circle cx="0"   cy="-17" r="4.5"/>
+      <circle cx="-15" cy="13"  r="4.5"/>
+      <circle cx="15"  cy="13"  r="4.5"/>
+      <line x1="0" y1="-17" x2="-15" y2="13" stroke="#fff" stroke-width="2"/>
+      <line x1="0" y1="-17" x2="15"  y2="13" stroke="#fff" stroke-width="2"/>
+    </g>
+
+    <!-- Migrating signal -->
+    <circle r="7" fill="#ff3a8c" filter="url(#bloom2)">
+      <animate attributeName="cx" values="0;127;180;127;0;-127;-180;-127;0" dur="8s" repeatCount="indefinite"/>
+      <animate attributeName="cy" values="-180;-127;0;127;180;127;0;-127;-180" dur="8s" repeatCount="indefinite"/>
+      <animate attributeName="r" values="5;9;5" dur="0.5s" repeatCount="indefinite"/>
+    </circle>
+  </g>
+</svg>
