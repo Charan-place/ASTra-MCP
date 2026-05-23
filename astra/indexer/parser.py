@@ -21,6 +21,14 @@ SKIP_DIRS = {
     "dist", "build", ".next", ".nuxt", "coverage", ".astra",
 }
 
+SKIP_FILES = {"d3.min.js", "d3.js"}
+
+
+def _should_skip_file(path) -> bool:
+    from pathlib import Path
+    p = Path(path)
+    return p.name in SKIP_FILES or any(skip in p.parts for skip in SKIP_DIRS)
+
 
 def _make_parser(ext: str):
     if not _HAS_TS:
@@ -252,6 +260,8 @@ def parse_file(path: Path) -> Optional[FileSymbols]:
     ext = path.suffix.lower()
     if ext not in SUPPORTED:
         return None
+    if path.name in SKIP_FILES:
+        return None
 
     try:
         src_bytes = path.read_bytes()
@@ -294,4 +304,5 @@ def iter_source_files(root: Path):
     for path in root.rglob("*"):
         if path.is_file() and path.suffix.lower() in SUPPORTED:
             if not any(skip in path.parts for skip in SKIP_DIRS):
-                yield path
+                if path.name not in SKIP_FILES:
+                    yield path
