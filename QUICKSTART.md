@@ -30,6 +30,7 @@ Edit `.claude/settings.json`:
 }
 ```
 
+
 Reload Claude Code. Now when you ask Claude to code:
 - It automatically calls `astra_get_context` first
 - Gets relevant code (93% fewer tokens)
