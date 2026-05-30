@@ -53,7 +53,7 @@ dependencies = [
 [project.urls]
 Homepage = "https://ast-ra-mcp.vercel.app"
 Repository = "https://github.com/Charan-place/ASTra-MCP"
-Documentation = "https://github.com/Charan-place/ASTra-MCP/blob/main/ARCHITECTURE.md"
+Documentation = "https://github.com/Charan-place/ASTra-MCP#readme"
 Issues = "https://github.com/Charan-place/ASTra-MCP/issues"
 Changelog = "https://github.com/Charan-place/ASTra-MCP/releases"
 
