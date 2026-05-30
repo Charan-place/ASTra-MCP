@@ -4,12 +4,17 @@ build-backend = "hatchling.build"
 
 [project]
 name = "astra-mcp"
-version = "0.1.0"
-description = "AST-powered knowledge graph for AI coding agents. Cuts token usage 93% by injecting only relevant code context."
+version = "1.0.0"
+description = "MCP server giving Claude Code, Cursor, Codex and Windsurf permanent AST-powered code memory. 98.9% token reduction. 100% local."
 readme = "README.md"
 license = { text = "Apache-2.0" }
-authors = [{ name = "Narra Satya Sai Charan" }]
-keywords = ["ai", "coding-agents", "claude", "mcp", "ast", "knowledge-graph", "code-intelligence"]
+authors = [{ name = "Narra Satya Sai Charan", email = "nsatyasaicharan@gmail.com" }]
+keywords = [
+    "mcp", "model-context-protocol", "claude-code", "cursor", "codex", "windsurf",
+    "ai-coding-assistant", "code-intelligence", "ast", "knowledge-graph",
+    "pagerank", "semantic-search", "codebase-memory", "token-reduction",
+    "tree-sitter", "code-analysis", "llm-tools", "developer-tools",
+]
 classifiers = [
     "Development Status :: 4 - Beta",
     "Environment :: Console",
@@ -46,9 +51,11 @@ dependencies = [
 ]
 
 [project.urls]
-Repository = "https://github.com/your-org/astra-mcp"
-Documentation = "https://github.com/your-org/astra-mcp#readme"
-Issues = "https://github.com/your-org/astra-mcp/issues"
+Homepage = "https://ast-ra-mcp.vercel.app"
+Repository = "https://github.com/Charan-place/ASTra-MCP"
+Documentation = "https://github.com/Charan-place/ASTra-MCP/blob/main/ARCHITECTURE.md"
+Issues = "https://github.com/Charan-place/ASTra-MCP/issues"
+Changelog = "https://github.com/Charan-place/ASTra-MCP/releases"
 
 [project.optional-dependencies]
 dev = [

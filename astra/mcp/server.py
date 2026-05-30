@@ -1,4 +1,4 @@
-"""MCP server. Exposes 7 tools to Claude Code, Codex, Cursor via stdio."""
+"""MCP server. Exposes 11 tools to Claude Code, Codex, Cursor via stdio."""
 import asyncio
 import json
 import logging
@@ -33,6 +33,10 @@ from astra.mcp.tools import (
     tool_get_file_map,
     tool_session_memory,
     tool_index_status,
+    tool_impact_analysis,
+    tool_semantic_audit,
+    tool_get_volatility,
+    tool_trace_cross_repo,
 )
 
 _TOOLS = [
@@ -121,6 +125,81 @@ _TOOLS = [
             "properties": {},
         },
     ),
+    Tool(
+        name="astra_impact_analysis",
+        description=(
+            "Blast radius analysis: what breaks if these functions change? "
+            "Returns risk score (0-100), list of affected callers, and untested high-risk nodes. "
+            "Use before editing a critical function."
+        ),
+        inputSchema={
+            "type": "object",
+            "properties": {
+                "function_names": {
+                    "type": "array",
+                    "items": {"type": "string"},
+                    "description": "Names of functions/classes you plan to change",
+                },
+                "file": {"type": "string", "description": "Optional: narrow to specific file"},
+            },
+            "required": ["function_names"],
+        },
+    ),
+    Tool(
+        name="astra_semantic_audit",
+        description=(
+            "Scan for semantic drift: functions whose name/docstring doesn't match their behavior. "
+            "Use before a major refactor to find misnamed or misleading functions."
+        ),
+        inputSchema={
+            "type": "object",
+            "properties": {
+                "file": {"type": "string", "description": "Optional: scan only this file"},
+                "threshold": {
+                    "type": "number",
+                    "default": 0.35,
+                    "description": "Drift score threshold 0-1 (lower = stricter)",
+                },
+            },
+        },
+    ),
+    Tool(
+        name="astra_get_volatility",
+        description=(
+            "Get temporal volatility: which functions change most often (from git history). "
+            "Requires astra timeline to have been run first. "
+            "High volatility = high risk, consider extra tests before changing."
+        ),
+        inputSchema={
+            "type": "object",
+            "properties": {
+                "function_name": {
+                    "type": "string",
+                    "description": "Optional: history for a specific function. Omit for top-k across codebase.",
+                },
+                "top_k": {"type": "integer", "default": 10},
+            },
+        },
+    ),
+    Tool(
+        name="astra_trace_cross_repo",
+        description=(
+            "Trace a function call across repository boundaries. "
+            "Requires: astra federate to have been run first. "
+            "Returns full call chain spanning multiple microservices/repos."
+        ),
+        inputSchema={
+            "type": "object",
+            "properties": {
+                "function_name": {"type": "string", "description": "Function to trace"},
+                "fed_db_path": {
+                    "type": "string",
+                    "description": "Optional: path to federation.db (default: ~/.astra/federation.db)",
+                },
+            },
+            "required": ["function_name"],
+        },
+    ),
 ]
 
 
@@ -194,8 +273,44 @@ async def run_server():
                 result = tool_index_status(store)
                 text = json.dumps(result, indent=2)
 
+            elif name == "astra_impact_analysis":
+                fn_names = arguments.get("function_names")
+                if not fn_names or not isinstance(fn_names, list):
+                    text = json.dumps({"error": "function_names must be a non-empty list of strings"})
+                else:
+                    result = tool_impact_analysis(store, fn_names, arguments.get("file"))
+                    text = json.dumps(result, indent=2)
+
+            elif name == "astra_semantic_audit":
+                result = tool_semantic_audit(
+                    store,
+                    file=arguments.get("file"),
+                    threshold=float(arguments.get("threshold", 0.35)),
+                )
+                text = json.dumps(result, indent=2)
+
+            elif name == "astra_get_volatility":
+                result = tool_get_volatility(
+                    store,
+                    function_name=arguments.get("function_name"),
+                    top_k=int(arguments.get("top_k", 10)),
+                )
+                text = json.dumps(result, indent=2)
+
+            elif name == "astra_trace_cross_repo":
+                fn_name = arguments.get("function_name")
+                if not fn_name:
+                    text = json.dumps({"error": "function_name is required"})
+                else:
+                    result = tool_trace_cross_repo(
+                        store,
+                        fn_name,
+                        fed_db_path=arguments.get("fed_db_path"),
+                    )
+                    text = json.dumps(result, indent=2)
+
             else:
-                text = json.dumps({"error": f"Unknown tool: {name}"})
+                text = json.dumps({"error": f"Unknown tool: {name}. Available: {[t.name for t in _TOOLS]}"})
 
         except KeyError as e:
             logger.error("Missing required argument for %s: %s", name, e)

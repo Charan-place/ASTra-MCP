@@ -170,6 +170,124 @@ def tool_session_memory(
     return memory.format_for_injection(sessions)
 
 
+def tool_trace_cross_repo(
+    store: GraphStore,
+    function_name: str,
+    fed_db_path: str = None,
+) -> dict:
+    """
+    Trace a function call across repository boundaries.
+    Requires: astra federate to have been run first.
+    Returns call chain spanning multiple repos.
+    """
+    from pathlib import Path as P
+    from astra.federation.resolver import FederatedResolver, FEDERATION_SCHEMA
+
+    default_fed_db = P.home() / ".astra" / "federation.db"
+    fed_path = P(fed_db_path) if fed_db_path else default_fed_db
+
+    if not fed_path.exists():
+        return {"error": "No federation DB found. Run: astra federate <repo1> <repo2>"}
+
+    # find the function node
+    candidates = store.get_nodes_by_name(function_name)
+    if not candidates:
+        return {"error": f"No indexed node: {function_name}"}
+
+    node = candidates[0]
+
+    # minimal resolver with just this store to do cross-repo trace
+    resolver = FederatedResolver(fed_path)
+    # detect which repo_id this store belongs to
+    repos = resolver.fed_db.get_repos()
+    repo_id = None
+    for r in repos:
+        if r["db_path"] == str(store.db_path):
+            repo_id = r["repo_id"]
+            resolver._stores[repo_id] = store
+            break
+
+    if not repo_id:
+        resolver.close()
+        return {"error": "This repo is not federated. Run: astra federate"}
+
+    trace = resolver.trace_cross_repo(node["id"], repo_id)
+    resolver.close()
+    return {"trace": trace, "hops": len(trace)}
+
+
+def tool_get_volatility(
+    store: GraphStore,
+    function_name: str = None,
+    top_k: int = 10,
+) -> dict:
+    """
+    Get temporal volatility data. Which functions change most often?
+    If function_name given: history for that specific function.
+    Otherwise: top-k most volatile functions across the codebase.
+    Requires: astra timeline to have been run first.
+    """
+    from astra.temporal.indexer import TemporalIndexer
+    indexer = TemporalIndexer(store)
+
+    if not indexer.is_indexed():
+        return {"error": "Temporal index not built. Run: astra timeline"}
+
+    if function_name:
+        # find node_id for this function name
+        candidates = store.get_nodes_by_name(function_name)
+        if not candidates:
+            return {"error": f"No indexed node: {function_name}"}
+        history = indexer.get_node_history(candidates[0]["id"])
+        return history or {"error": f"No temporal data for: {function_name}"}
+    else:
+        nodes = indexer.get_volatile_nodes(top_k=top_k)
+        return {"top_volatile": nodes, "count": len(nodes)}
+
+
+def tool_semantic_audit(
+    store: GraphStore,
+    file: str = None,
+    threshold: float = 0.35,
+) -> list[dict]:
+    """
+    Scan for semantic drift: functions whose name/docstring doesn't match their behavior.
+    Use before a major refactor to find misnamed functions.
+    Returns list of drift warnings sorted by severity.
+    """
+    from astra.semantics.drift import SemanticDriftDetector
+    detector = SemanticDriftDetector(store, threshold=threshold)
+    warnings = detector.scan(file_filter=file)
+    return [w.to_dict() for w in warnings]
+
+
+def tool_impact_analysis(
+    store: GraphStore,
+    function_names: list[str],
+    file: str = None,
+) -> dict:
+    """
+    Blast radius analysis: what breaks if these functions change?
+    Returns risk score, affected callers, untested high-risk nodes.
+    Use before editing a critical function.
+    """
+    from astra.impact.analyzer import ImpactAnalyzer
+
+    node_ids = []
+    for name in function_names:
+        candidates = store.get_nodes_by_name(name)
+        if file:
+            candidates = [c for c in candidates if file in c["file"]]
+        node_ids.extend(c["id"] for c in candidates)
+
+    if not node_ids:
+        return {"error": f"No indexed nodes found for: {function_names}"}
+
+    analyzer = ImpactAnalyzer(store)
+    report = analyzer.compute_blast_radius(node_ids)
+    return report.to_dict()
+
+
 def tool_index_status(store: GraphStore) -> dict:
     """Graph stats: nodes, edges, files indexed. Use to verify index is fresh."""
     stats = store.stats()
