@@ -16,3 +16,10 @@ QUICKSTART.md
 WHAT_IS_ASTRA.md
 NOTICE
 LICENSE
+vscode-extension/
+tests/
+.github/
+Dockerfile
+docker-compose.yml
+.dockerignore
+.pre-commit-hooks.yaml
