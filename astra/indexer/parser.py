@@ -13,8 +13,16 @@ try:
 except ImportError:
     _HAS_TS = False
 
+try:
+    import tree_sitter_go as _tsgo
+    import tree_sitter_rust as _tsrust
+    import tree_sitter_java as _tsjava
+    _HAS_EXTRA_LANGS = True
+except ImportError:
+    _HAS_EXTRA_LANGS = False
 
-SUPPORTED = {".py", ".js", ".ts", ".jsx", ".tsx", ".mjs", ".cjs"}
+
+SUPPORTED = {".py", ".js", ".ts", ".jsx", ".tsx", ".mjs", ".cjs", ".go", ".rs", ".java"}
 
 SKIP_DIRS = {
     ".git", "node_modules", "__pycache__", ".venv", "venv", "env",
@@ -41,6 +49,18 @@ def _make_parser(ext: str):
         L = Language(_tsts.language_typescript())
     elif ext in (".tsx",):
         L = Language(_tsts.language_tsx())
+    elif ext == ".go":
+        if not _HAS_EXTRA_LANGS:
+            raise RuntimeError("pip install tree-sitter-go tree-sitter-rust tree-sitter-java")
+        L = Language(_tsgo.language())
+    elif ext == ".rs":
+        if not _HAS_EXTRA_LANGS:
+            raise RuntimeError("pip install tree-sitter-go tree-sitter-rust tree-sitter-java")
+        L = Language(_tsrust.language())
+    elif ext == ".java":
+        if not _HAS_EXTRA_LANGS:
+            raise RuntimeError("pip install tree-sitter-go tree-sitter-rust tree-sitter-java")
+        L = Language(_tsjava.language())
     else:
         raise ValueError(f"Unsupported: {ext}")
     return _TSParser(L), L
@@ -254,6 +274,247 @@ def _extract_js_calls(node, src: bytes) -> list[str]:
     return list(set(calls))
 
 
+# ── Go ─────────────────────────────────────────────────────────────────────
+
+def _extract_go_calls(node, src: bytes) -> list[str]:
+    calls = []
+    for call_node in _walk(node, "call_expression"):
+        fn_field = _field(call_node, "function")
+        if not fn_field:
+            continue
+        if fn_field.type == "identifier":
+            calls.append(_text(fn_field, src))
+        elif fn_field.type == "selector_expression":
+            field_node = _field(fn_field, "field")
+            if field_node:
+                calls.append(_text(field_node, src))
+    return list(set(calls))
+
+
+def _parse_go(tree, src: bytes, file_str: str) -> tuple[list[Symbol], list[str]]:
+    symbols: list[Symbol] = []
+    root = tree.root_node
+
+    # struct/interface types
+    for td_node in _walk(root, "type_declaration"):
+        for spec in td_node.children:
+            if spec.type != "type_spec":
+                continue
+            name_node = _field(spec, "name")
+            type_node = _field(spec, "type")
+            if not name_node or not type_node:
+                continue
+            name = _text(name_node, src)
+            if type_node.type == "struct_type":
+                sym_type = "struct"
+                sig = f"type {name} struct"
+            elif type_node.type == "interface_type":
+                sym_type = "interface"
+                sig = f"type {name} interface"
+            else:
+                continue
+            symbols.append(Symbol(
+                type=sym_type, name=name, file=file_str,
+                signature=sig,
+                line_start=spec.start_point[0] + 1,
+                line_end=spec.end_point[0] + 1,
+            ))
+
+    # functions
+    for fn_node in _walk(root, "function_declaration"):
+        name_node = _field(fn_node, "name")
+        if not name_node:
+            continue
+        name = _text(name_node, src)
+        params_node = _field(fn_node, "parameters")
+        params = _text(params_node, src) if params_node else "()"
+        result_node = _field(fn_node, "result")
+        ret = f" {_text(result_node, src)}" if result_node else ""
+        calls = _extract_go_calls(fn_node, src)
+        symbols.append(Symbol(
+            type="function", name=name, file=file_str,
+            signature=f"func {name}{params}{ret}",
+            line_start=fn_node.start_point[0] + 1,
+            line_end=fn_node.end_point[0] + 1,
+            calls=calls,
+        ))
+
+    # methods (with receiver)
+    for method_node in _walk(root, "method_declaration"):
+        name_node = _field(method_node, "name")
+        if not name_node:
+            continue
+        name = _text(name_node, src)
+        receiver_node = _field(method_node, "receiver")
+        receiver = _text(receiver_node, src) if receiver_node else "()"
+        params_node = _field(method_node, "parameters")
+        params = _text(params_node, src) if params_node else "()"
+        result_node = _field(method_node, "result")
+        ret = f" {_text(result_node, src)}" if result_node else ""
+        calls = _extract_go_calls(method_node, src)
+        symbols.append(Symbol(
+            type="function", name=name, file=file_str,
+            signature=f"func {receiver} {name}{params}{ret}",
+            line_start=method_node.start_point[0] + 1,
+            line_end=method_node.end_point[0] + 1,
+            calls=calls,
+        ))
+
+    all_calls = _extract_go_calls(root, src)
+    return symbols, all_calls
+
+
+# ── Rust ───────────────────────────────────────────────────────────────────
+
+def _extract_rust_calls(node, src: bytes) -> list[str]:
+    calls = []
+    for call_node in _walk(node, "call_expression"):
+        fn_field = _field(call_node, "function")
+        if not fn_field:
+            continue
+        if fn_field.type == "identifier":
+            calls.append(_text(fn_field, src))
+        elif fn_field.type == "field_expression":
+            field_node = _field(fn_field, "field")
+            if field_node:
+                calls.append(_text(field_node, src))
+        elif fn_field.type == "scoped_identifier":
+            name_node = _field(fn_field, "name")
+            if name_node:
+                calls.append(_text(name_node, src))
+    return list(set(calls))
+
+
+def _parse_rust(tree, src: bytes, file_str: str) -> tuple[list[Symbol], list[str]]:
+    symbols: list[Symbol] = []
+    root = tree.root_node
+
+    # structs
+    for st_node in _walk(root, "struct_item"):
+        name_node = _field(st_node, "name")
+        if not name_node:
+            continue
+        name = _text(name_node, src)
+        symbols.append(Symbol(
+            type="struct", name=name, file=file_str,
+            signature=f"struct {name}",
+            line_start=st_node.start_point[0] + 1,
+            line_end=st_node.end_point[0] + 1,
+        ))
+
+    # traits
+    for tr_node in _walk(root, "trait_item"):
+        name_node = _field(tr_node, "name")
+        if not name_node:
+            continue
+        name = _text(name_node, src)
+        symbols.append(Symbol(
+            type="trait", name=name, file=file_str,
+            signature=f"trait {name}",
+            line_start=tr_node.start_point[0] + 1,
+            line_end=tr_node.end_point[0] + 1,
+        ))
+
+    # modules (treated as classes, for grouping)
+    for mod_node in _walk(root, "mod_item"):
+        name_node = _field(mod_node, "name")
+        if not name_node:
+            continue
+        name = _text(name_node, src)
+        symbols.append(Symbol(
+            type="module", name=name, file=file_str,
+            signature=f"mod {name}",
+            line_start=mod_node.start_point[0] + 1,
+            line_end=mod_node.end_point[0] + 1,
+        ))
+
+    # free functions and impl-block (associated) functions/methods
+    for fn_node in _walk(root, "function_item"):
+        name_node = _field(fn_node, "name")
+        if not name_node:
+            continue
+        name = _text(name_node, src)
+        params_node = _field(fn_node, "parameters")
+        params = _text(params_node, src) if params_node else "()"
+        ret_node = _field(fn_node, "return_type")
+        ret = f" -> {_text(ret_node, src)}" if ret_node else ""
+        calls = _extract_rust_calls(fn_node, src)
+        symbols.append(Symbol(
+            type="function", name=name, file=file_str,
+            signature=f"fn {name}{params}{ret}",
+            line_start=fn_node.start_point[0] + 1,
+            line_end=fn_node.end_point[0] + 1,
+            calls=calls,
+        ))
+
+    all_calls = _extract_rust_calls(root, src)
+    return symbols, all_calls
+
+
+# ── Java ───────────────────────────────────────────────────────────────────
+
+def _extract_java_calls(node, src: bytes) -> list[str]:
+    calls = []
+    for call_node in _walk(node, "method_invocation"):
+        name_node = _field(call_node, "name")
+        if name_node:
+            calls.append(_text(name_node, src))
+    return list(set(calls))
+
+
+def _parse_java(tree, src: bytes, file_str: str) -> tuple[list[Symbol], list[str]]:
+    symbols: list[Symbol] = []
+    root = tree.root_node
+
+    # classes
+    for cls_node in _walk(root, "class_declaration"):
+        name_node = _field(cls_node, "name")
+        if not name_node:
+            continue
+        name = _text(name_node, src)
+        symbols.append(Symbol(
+            type="class", name=name, file=file_str,
+            signature=f"class {name}",
+            line_start=cls_node.start_point[0] + 1,
+            line_end=cls_node.end_point[0] + 1,
+        ))
+
+    # interfaces
+    for if_node in _walk(root, "interface_declaration"):
+        name_node = _field(if_node, "name")
+        if not name_node:
+            continue
+        name = _text(name_node, src)
+        symbols.append(Symbol(
+            type="interface", name=name, file=file_str,
+            signature=f"interface {name}",
+            line_start=if_node.start_point[0] + 1,
+            line_end=if_node.end_point[0] + 1,
+        ))
+
+    # methods
+    for method_node in _walk(root, "method_declaration"):
+        name_node = _field(method_node, "name")
+        if not name_node:
+            continue
+        name = _text(name_node, src)
+        params_node = _field(method_node, "parameters")
+        params = _text(params_node, src) if params_node else "()"
+        ret_node = _field(method_node, "type")
+        ret = f"{_text(ret_node, src)} " if ret_node else ""
+        calls = _extract_java_calls(method_node, src)
+        symbols.append(Symbol(
+            type="function", name=name, file=file_str,
+            signature=f"{ret}{name}{params}",
+            line_start=method_node.start_point[0] + 1,
+            line_end=method_node.end_point[0] + 1,
+            calls=calls,
+        ))
+
+    all_calls = _extract_java_calls(root, src)
+    return symbols, all_calls
+
+
 # ── Public API ─────────────────────────────────────────────────────────────
 
 def parse_file(path: Path) -> Optional[FileSymbols]:
@@ -278,6 +539,12 @@ def parse_file(path: Path) -> Optional[FileSymbols]:
 
     if ext == ".py":
         symbols, all_calls = _parse_python(tree, src_bytes, file_str)
+    elif ext == ".go":
+        symbols, all_calls = _parse_go(tree, src_bytes, file_str)
+    elif ext == ".rs":
+        symbols, all_calls = _parse_rust(tree, src_bytes, file_str)
+    elif ext == ".java":
+        symbols, all_calls = _parse_java(tree, src_bytes, file_str)
     else:
         symbols, all_calls = _parse_js(tree, src_bytes, file_str)
 

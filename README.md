@@ -147,7 +147,7 @@ YOUR CODEBASE
 ┌─────────────────────────────────────────────────────────────┐
 │  PHASE 1 — INDEX  (one-time, ~60s)                          │
 │                                                             │
-│  tree-sitter  →  AST parse every .py / .js / .ts file      │
+│  tree-sitter  →  AST parse every .py/.js/.ts/.go/.rs/.java │
 │       ↓                                                     │
 │  Extract symbols: functions, classes, methods, imports      │
 │       ↓                                                     │
@@ -677,7 +677,7 @@ Roughly 1–3% of source size. A 50,000-line codebase produces a ~2MB SQLite fil
 <details>
 <summary><b>Languages supported?</b></summary>
 
-Python, JavaScript, TypeScript, JSX, TSX. Go, Rust, Java planned.
+Python, JavaScript, TypeScript, JSX, TSX, Go, Rust, Java.
 </details>
 
 <details>
@@ -715,6 +715,7 @@ No. All computation is local. Nothing sent anywhere. Embeddings stored in `.astr
 ## 🗺 Roadmap
 
 - [x] Python, JS, TS parser
+- [x] Go, Rust, Java parsers
 - [x] Personalized PageRank
 - [x] MCP stdio protocol (11 tools)
 - [x] Real-time dashboard
@@ -723,7 +724,6 @@ No. All computation is local. Nothing sent anywhere. Embeddings stored in `.astr
 - [x] Semantic drift detector
 - [x] Temporal knowledge graph
 - [x] Cross-repo federation
-- [ ] Go, Rust, Java parsers
 - [ ] VS Code inline graph extension
 - [ ] Team-shared index (S3/GCS backend)
 - [ ] HNSW indexing for 100k+ symbol corpora
@@ -737,7 +737,7 @@ Read [CONTRIBUTING.md](CONTRIBUTING.md) for full setup instructions and guidelin
 
 PRs welcome. High-value areas:
 
-- 🌐 New language parsers (Go, Rust, Java) — [astra/indexer/parser.py](astra/indexer/parser.py)
+- 🌐 New language parsers (C, C++, Ruby, ...) — [astra/indexer/parser.py](astra/indexer/parser.py)
 - 📊 Benchmarks on diverse codebases — [benchmarks/](benchmarks/)
 - 🎨 Dashboard UX — [astra/dashboard/](astra/dashboard/)
 - 🧪 Test coverage — [tests/](tests/)

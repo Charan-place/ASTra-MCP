@@ -169,6 +169,7 @@ def _handle_client(conn: socket.socket, daemon: "AstraDaemon"):
       Request:  {"cmd": "query"|"status"|"delta"|"ping", ...}
       Response: {"ok": true, "data": ...} or {"ok": false, "error": "..."}
     """
+    keep_open = False
     try:
         conn.settimeout(10.0)
         raw = b""
@@ -191,6 +192,18 @@ def _handle_client(conn: socket.socket, daemon: "AstraDaemon"):
             return
 
         cmd = req.get("cmd", "")
+
+        if cmd == "subscribe":
+            # Register this connection as a live subscriber and keep it open.
+            # The daemon will push {"type": "graph_delta", "delta": {...}}
+            # messages to it (newline-delimited JSON) whenever a file is
+            # re-indexed. Used by the MCP server to relay streaming
+            # graph-updated notifications to a connected MCP client.
+            conn.sendall(json.dumps({"ok": True, "data": {"subscribed": True}}).encode() + b"\n")
+            conn.settimeout(None)
+            daemon._subscribers.append(conn)
+            keep_open = True
+            return
 
         if cmd == "ping":
             resp = {"ok": True, "data": {"pong": True, "version": PROTOCOL_VERSION}}
@@ -254,7 +267,8 @@ def _handle_client(conn: socket.socket, daemon: "AstraDaemon"):
         except Exception:
             pass
     finally:
-        conn.close()
+        if not keep_open:
+            conn.close()
 
 
 # ── Main Daemon ────────────────────────────────────────────────────────────
@@ -281,6 +295,7 @@ class AstraDaemon:
             scores = _incremental_pagerank_update(self.graph, self.store, all_changed)
             self.last_delta = delta.to_dict()
             self.last_delta["pagerank_updated"] = len(scores)
+            self.last_delta["graph_version"] = self.store.get_graph_version()
             self.last_delta_ts = delta.ts
 
         # persist delta for polling clients

@@ -16,7 +16,7 @@ _SCHEMA = Path(__file__).parent / "schema.sql"
 
 class GraphStore:
     def __init__(self, db_path: Path):
-        self.db_path = db_path
+        self.db_path = Path(db_path)
         self._lock = threading.Lock()
         self.conn = sqlite3.connect(str(db_path), check_same_thread=False)
         self.conn.row_factory = sqlite3.Row
@@ -131,6 +131,10 @@ class GraphStore:
             result.append((r["id"], arr))
         return result
 
+    def has_embeddings(self) -> bool:
+        row = self.conn.execute("SELECT 1 FROM nodes WHERE embedding IS NOT NULL LIMIT 1").fetchone()
+        return row is not None
+
     def all_node_ids(self) -> list[str]:
         rows = self.conn.execute("SELECT id FROM nodes").fetchall()
         return [r["id"] for r in rows]
@@ -151,6 +155,22 @@ class GraphStore:
         for r in rows:
             result.setdefault(r["name"], []).append((r["id"], r["file"]))
         return result
+
+    def get_graph_version(self) -> float:
+        """
+        Monotonic staleness signal for the graph: max(indexed_at) across nodes
+        and file_hashes. Increases whenever a file is (re)indexed. Callers can
+        compare this value across two responses to detect that the graph
+        changed between calls, even without a push notification channel.
+        """
+        row = self.conn.execute(
+            "SELECT MAX(v) FROM ("
+            "SELECT MAX(indexed_at) AS v FROM nodes "
+            "UNION ALL "
+            "SELECT MAX(indexed_at) AS v FROM file_hashes"
+            ")"
+        ).fetchone()
+        return float(row[0]) if row and row[0] is not None else 0.0
 
     def stats(self) -> dict:
         n_nodes = self.conn.execute("SELECT COUNT(*) FROM nodes").fetchone()[0]

@@ -2,6 +2,7 @@
 import hashlib
 import json
 import logging
+import os
 import time
 from pathlib import Path
 from typing import Optional
@@ -22,6 +23,36 @@ def _file_hash(path: Path) -> str:
     h = hashlib.md5()
     h.update(path.read_bytes())
     return h.hexdigest()
+
+
+def _update_ann_index(store: GraphStore, ids: list[str], embeddings: list) -> None:
+    """Incrementally update the on-disk HNSW index, if the hnsw backend is enabled.
+
+    Best-effort: any failure (e.g. hnswlib not installed) is logged and ignored,
+    since the brute-force path in astra/query/engine.py always remains correct.
+    """
+    if os.environ.get("ASTRA_INDEX_BACKEND", "brute").lower() != "hnsw":
+        return
+    pairs = [(nid, emb) for nid, emb in zip(ids, embeddings) if emb is not None]
+    if not pairs:
+        return
+    try:
+        from astra.graph.ann_index import HNSWIndex
+
+        index_path = store.db_path.parent / "hnsw.index"
+        meta_path = index_path.with_suffix(index_path.suffix + ".meta.npy")
+        idx = HNSWIndex()
+        if index_path.exists() and meta_path.exists():
+            idx.load(index_path)
+        for nid, emb in pairs:
+            idx.add(nid, emb)
+        idx.save(index_path)
+
+        # invalidate the query engine's in-memory cache so it reloads from disk
+        from astra.query import engine as _engine
+        _engine._ann_index_cache.pop(str(store.db_path), None)
+    except Exception:
+        logger.warning("Failed to update HNSW index incrementally", exc_info=True)
 
 
 def _resolve_cross_file_calls(store: GraphStore) -> int:
@@ -107,6 +138,24 @@ def index_codebase(root: Path, store: GraphStore, force: bool = False) -> dict:
     # cross-file CALLS resolution (second pass over stored calls_json)
     cross_edges = _resolve_cross_file_calls(store)
     store.commit()
+
+    # full corpus scan (initial build or `--force`) → rebuild the ANN index once
+    if os.environ.get("ASTRA_INDEX_BACKEND", "brute").lower() == "hnsw":
+        try:
+            from astra.graph.ann_index import HNSWIndex
+            import numpy as np
+
+            corpus = store.all_embeddings()
+            if corpus:
+                ids, vecs = zip(*corpus)
+                idx = HNSWIndex()
+                idx.build(list(ids), np.stack(vecs))
+                idx.save(store.db_path.parent / "hnsw.index")
+                from astra.query import engine as _engine
+                _engine._ann_index_cache.pop(str(store.db_path), None)
+        except Exception:
+            logger.warning("Failed to (re)build HNSW index", exc_info=True)
+
     stats["elapsed_s"] = round(time.time() - start, 2)
     stats["cross_file_edges"] = cross_edges
     logger.info(
@@ -154,5 +203,6 @@ def index_single_file(path: Path, store: GraphStore) -> int:
                         store.upsert_edge(Edge(src=sym.id, dst=callee_id, relation="CALLS"))
 
     store.commit()
+    _update_ann_index(store, [s.id for s in file_syms.symbols], list(embeddings))
     logger.debug("Re-indexed %s: %d symbols", file_str, len(file_syms.symbols))
     return len(file_syms.symbols)

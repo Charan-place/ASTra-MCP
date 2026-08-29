@@ -1,4 +1,4 @@
-"""All 7 MCP tool handlers. Pure functions, no server state here."""
+"""All 11 MCP tool handlers. Pure functions, no server state here."""
 import logging
 import time
 import uuid
@@ -44,6 +44,7 @@ def tool_get_context(
         "symbols_included": result["nodes"],
         "snapshot": snapshot_id,
         "usage": f"Injected ~{result['tokens']} tokens (vs full codebase read)",
+        "graph_version": store.get_graph_version(),
     }
 
 
@@ -296,4 +297,6 @@ def tool_index_status(store: GraphStore) -> dict:
         "edges": stats["edges"],
         "files_indexed": stats["files"],
         "db_size_kb": round(Path(store.db_path).stat().st_size / 1024, 1) if Path(store.db_path).exists() else 0,
+        "graph_version": store.get_graph_version(),
+        "last_updated": store.get_graph_version(),
     }

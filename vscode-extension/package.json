@@ -1,0 +1,99 @@
+{
+  "name": "astra-mcp",
+  "displayName": "ASTra Code Graph",
+  "description": "Inline code-graph intelligence (callers, callees, importance, semantic drift) powered by the ASTra MCP daemon/dashboard.",
+  "version": "0.0.1",
+  "publisher": "astra-mcp",
+  "private": true,
+  "engines": {
+    "vscode": "^1.85.0"
+  },
+  "categories": [
+    "Other",
+    "Visualization",
+    "Programming Languages"
+  ],
+  "activationEvents": [
+    "onLanguage:python",
+    "onLanguage:javascript",
+    "onLanguage:typescript",
+    "onLanguage:javascriptreact",
+    "onLanguage:typescriptreact",
+    "onLanguage:go",
+    "onLanguage:rust",
+    "onLanguage:java",
+    "onView:astraGraphView"
+  ],
+  "main": "./out/extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "astra.refreshGraphView",
+        "title": "ASTra: Refresh Call Graph View",
+        "icon": "$(refresh)"
+      },
+      {
+        "command": "astra.showStatus",
+        "title": "ASTra: Show Daemon/Dashboard Status"
+      }
+    ],
+    "menus": {
+      "view/title": [
+        {
+          "command": "astra.refreshGraphView",
+          "when": "view == astraGraphView",
+          "group": "navigation"
+        }
+      ]
+    },
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "astra-sidebar",
+          "title": "ASTra",
+          "icon": "resources/icon.svg"
+        }
+      ]
+    },
+    "views": {
+      "astra-sidebar": [
+        {
+          "id": "astraGraphView",
+          "name": "Call Graph",
+          "contextualTitle": "ASTra Call Graph"
+        }
+      ]
+    },
+    "configuration": {
+      "title": "ASTra",
+      "properties": {
+        "astra.dashboardUrl": {
+          "type": "string",
+          "default": "http://127.0.0.1:7865",
+          "description": "Base URL of the local ASTra dashboard HTTP server (started with `astra dashboard`)."
+        },
+        "astra.daemonSocketPath": {
+          "type": "string",
+          "default": "",
+          "description": "Path to the ASTra daemon Unix domain socket. Leave empty to use the default (~/.astra/daemon.sock)."
+        },
+        "astra.enableCodeLens": {
+          "type": "boolean",
+          "default": true,
+          "description": "Show inline CodeLens with caller/callee counts and importance."
+        }
+      }
+    }
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run compile",
+    "compile": "tsc -p ./",
+    "watch": "tsc -watch -p ./",
+    "typecheck": "tsc --noEmit -p ./"
+  },
+  "devDependencies": {
+    "@types/node": "^20.11.0",
+    "@types/vscode": "^1.85.0",
+    "typescript": "^5.4.0"
+  }
+}

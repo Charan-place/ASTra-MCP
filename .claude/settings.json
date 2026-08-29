@@ -1,0 +1,9 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(pip3.11 index *)",
+      "Bash(python3.11 -c \"import sys; print\\(sys.prefix\\)\")",
+      "Bash(python3.11 -m pip --version)"
+    ]
+  }
+}

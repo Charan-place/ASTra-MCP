@@ -1,0 +1,30 @@
+version: "3.9"
+
+services:
+  astra-daemon:
+    build: .
+    image: astra-mcp:latest
+    container_name: astra-daemon
+    entrypoint: ["python", "-m", "astra.daemon.runner"]
+    command: ["--repo", "/workspace", "--db", "/app/.astra/graph.db"]
+    volumes:
+      - astra-data:/app/.astra
+      - .:/workspace:ro
+    restart: unless-stopped
+
+  astra-dashboard:
+    build: .
+    image: astra-mcp:latest
+    container_name: astra-dashboard
+    command: ["dashboard", "--host", "0.0.0.0", "--no-open"]
+    ports:
+      - "7865:7865"
+    volumes:
+      - astra-data:/app/.astra
+      - .:/workspace:ro
+    depends_on:
+      - astra-daemon
+    restart: unless-stopped
+
+volumes:
+  astra-data:

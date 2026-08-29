@@ -20,8 +20,10 @@ app = typer.Typer(
 )
 daemon_app = typer.Typer(help="Manage the ASTra live daemon", no_args_is_help=True)
 memory_app = typer.Typer(help="Manage session memory", no_args_is_help=True)
+hooks_app = typer.Typer(help="Manage the ASTra git pre-commit hook", no_args_is_help=True)
 app.add_typer(daemon_app, name="daemon")
 app.add_typer(memory_app, name="memory")
+app.add_typer(hooks_app, name="hooks")
 console = Console()
 
 
@@ -641,6 +643,53 @@ def daemon_query(
     d = resp["data"]
     console.print(d["context"])
     console.print(f"\n[dim]── {d['tokens']} tokens | {d['nodes']} symbols | {elapsed_ms}ms (daemon)[/]")
+
+
+@hooks_app.command("install")
+def hooks_install(
+    project: Path = typer.Argument(Path("."), help="Project root (must be a git repo)"),
+):
+    """Install a git pre-commit hook that keeps the ASTra index fresh."""
+    from astra.hooks.installer import install_hook, HooksInstallError
+
+    try:
+        hook_path = install_hook(project)
+    except HooksInstallError as e:
+        console.print(f"[red]{e}[/]")
+        raise typer.Exit(1)
+
+    console.print(f"[bold green]Installed[/] pre-commit hook: {hook_path}")
+
+
+@hooks_app.command("uninstall")
+def hooks_uninstall(
+    project: Path = typer.Argument(Path("."), help="Project root (must be a git repo)"),
+):
+    """Remove the ASTra git pre-commit hook, restoring any prior hook."""
+    from astra.hooks.installer import uninstall_hook, HooksInstallError
+
+    try:
+        removed = uninstall_hook(project)
+    except HooksInstallError as e:
+        console.print(f"[red]{e}[/]")
+        raise typer.Exit(1)
+
+    if removed:
+        console.print("[bold green]Removed[/] ASTra pre-commit hook.")
+    else:
+        console.print("[yellow]No ASTra-managed pre-commit hook found.[/]")
+
+
+@hooks_app.command("run-staged", hidden=True)
+def hooks_run_staged(
+    project: Path = typer.Argument(Path("."), help="Project root"),
+):
+    """Internal: re-index staged files. Called by the installed pre-commit hook."""
+    from astra.hooks.installer import run_staged_reindex
+
+    count = run_staged_reindex(project)
+    if count:
+        console.print(f"[dim]astra: re-indexed {count} staged file(s)[/]")
 
 
 def main():

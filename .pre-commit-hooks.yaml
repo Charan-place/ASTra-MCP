@@ -1,0 +1,8 @@
+- id: astra-reindex
+  name: ASTra incremental re-index
+  description: Keeps the ASTra code knowledge graph in sync with staged changes.
+  entry: astra hooks run-staged
+  language: python
+  pass_filenames: false
+  always_run: true
+  stages: [pre-commit]

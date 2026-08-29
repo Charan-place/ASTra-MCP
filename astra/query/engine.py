@@ -1,4 +1,5 @@
 """Main query engine: task description → minimal relevant context."""
+import os
 import time
 import networkx as nx
 
@@ -10,6 +11,50 @@ from astra.query.serializer import build_context
 # Cache: db_path -> (graph, built_at_timestamp)
 _nx_graph_cache: dict[str, tuple[nx.DiGraph, float]] = {}
 _CACHE_TTL_S = 300  # rebuild graph after 5 minutes of no invalidation
+
+# Cache: db_path -> HNSWIndex (only populated when ASTRA_INDEX_BACKEND=hnsw)
+_ann_index_cache: dict[str, "object"] = {}
+
+
+def _index_backend() -> str:
+    return os.environ.get("ASTRA_INDEX_BACKEND", "brute").lower()
+
+
+def _get_ann_index(store: GraphStore):
+    """Load (or build+cache) the HNSW index for this store, from disk if present."""
+    from astra.graph.ann_index import HNSWIndex
+
+    key = str(store.db_path)
+    idx = _ann_index_cache.get(key)
+    if idx is not None:
+        return idx
+
+    idx = HNSWIndex()
+    index_path = store.db_path.parent / "hnsw.index"
+    meta_path = index_path.with_suffix(index_path.suffix + ".meta.npy")
+    if index_path.exists() and meta_path.exists():
+        idx.load(index_path)
+    else:
+        corpus = store.all_embeddings()
+        if corpus:
+            ids, vecs = zip(*corpus)
+            import numpy as np
+            idx.build(list(ids), np.stack(vecs))
+            idx.save(index_path)
+    _ann_index_cache[key] = idx
+    return idx
+
+
+def _semantic_top_k(store: GraphStore, query_vec, k: int) -> list[tuple[str, float]]:
+    """Dispatch to the configured similarity backend."""
+    if _index_backend() == "hnsw":
+        idx = _get_ann_index(store)
+        results = idx.query(query_vec, k=k)
+        if results:
+            return results
+        # fall through to brute-force if the ANN index is empty/unbuilt
+    corpus = store.all_embeddings()
+    return top_k_similar(query_vec, corpus, k=k)
 
 
 def _get_graph(store: GraphStore) -> nx.DiGraph:
@@ -50,11 +95,10 @@ def get_context(
     query_vec = embed_text(task)
 
     # step 2: semantic seed finding
-    corpus = store.all_embeddings()
-    if not corpus:
+    if not store.has_embeddings():
         return {"context": "# ASTra: no indexed symbols found. Run: astra init", "tokens": 0, "nodes": 0}
 
-    top_seeds = top_k_similar(query_vec, corpus, k=semantic_k)
+    top_seeds = _semantic_top_k(store, query_vec, k=semantic_k)
     seed_ids = [nid for nid, _ in top_seeds]
 
     # step 3: PageRank expansion
@@ -88,13 +132,13 @@ def get_context(
 def search_symbols(store: GraphStore, query: str, top_k: int = 10) -> list[dict]:
     """Semantic symbol search. Returns list of node dicts with score."""
     query_vec = embed_text(query)
-    corpus = store.all_embeddings()
-    results = top_k_similar(query_vec, corpus, k=top_k)
+    results = _semantic_top_k(store, query_vec, k=top_k)
 
     out = []
     for nid, score in results:
         node = store.get_node(nid)
         if node:
+            node.pop("embedding", None)  # raw float32 bytes aren't JSON-serializable
             node["score"] = round(score, 4)
             out.append(node)
     return out

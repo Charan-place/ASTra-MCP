@@ -38,6 +38,8 @@ from astra.mcp.tools import (
     tool_get_volatility,
     tool_trace_cross_repo,
 )
+from astra.mcp.notifications import send_graph_updated_notification
+from astra.daemon.core import SOCKET_PATH
 
 _TOOLS = [
     Tool(
@@ -230,6 +232,73 @@ def _auto_index_if_empty(store: GraphStore, project: str):
             logger.warning("Auto-index failed: %s", e)
 
 
+async def _daemon_notification_bridge(server: Server):
+    """
+    Best-effort streaming-updates bridge: if the ASTra daemon is running,
+    connect to its Unix socket, subscribe to graph_delta broadcasts, and
+    relay each one to the currently-connected MCP client as an
+    `astra/graph_updated` notification.
+
+    This is intentionally best-effort:
+    - If the daemon isn't running, this loop just retries/backs off; tool
+      responses still carry `graph_version` so clients can detect staleness
+      without this channel.
+    - There's no queuing/replay: a delta broadcast while no MCP session has
+      been established yet (before the first tool call) is dropped, since
+      we don't have a session to push through until the SDK gives us one
+      via `server.request_context`.
+    """
+    import socket as _socket
+
+    backoff = 1.0
+    while True:
+        try:
+            if not SOCKET_PATH.exists():
+                await asyncio.sleep(backoff)
+                continue
+
+            sock = _socket.socket(_socket.AF_UNIX, _socket.SOCK_STREAM)
+            sock.setblocking(False)
+            loop = asyncio.get_event_loop()
+            await loop.sock_connect(sock, str(SOCKET_PATH))
+            await loop.sock_sendall(sock, json.dumps({"cmd": "subscribe"}).encode() + b"\n")
+
+            buf = b""
+            backoff = 1.0
+            while True:
+                chunk = await loop.sock_recv(sock, 4096)
+                if not chunk:
+                    break
+                buf += chunk
+                while b"\n" in buf:
+                    line, buf = buf.split(b"\n", 1)
+                    if not line.strip():
+                        continue
+                    try:
+                        msg = json.loads(line)
+                    except json.JSONDecodeError:
+                        continue
+                    if msg.get("type") == "graph_delta":
+                        session = None
+                        try:
+                            session = server.request_context.session
+                        except LookupError:
+                            session = None
+                        if session is not None:
+                            await send_graph_updated_notification(session, msg.get("delta", {}))
+                        else:
+                            logger.debug(
+                                "graph_delta received but no MCP session context yet; dropping: %s",
+                                msg.get("delta", {}).get("file"),
+                            )
+        except (ConnectionRefusedError, FileNotFoundError, OSError) as e:
+            logger.debug("Daemon notification bridge: %s (retrying in %.1fs)", e, backoff)
+        except Exception as e:
+            logger.warning("Daemon notification bridge error: %s", e)
+        await asyncio.sleep(backoff)
+        backoff = min(backoff * 2, 30.0)
+
+
 async def run_server():
     server = Server("astra-mcp")
     store = _get_store()
@@ -238,6 +307,11 @@ async def run_server():
     logger.info("ASTra MCP server starting. project=%s data_dir=%s", project, store.db_path)
     loop = asyncio.get_event_loop()
     await loop.run_in_executor(None, _auto_index_if_empty, store, project)
+
+    # Best-effort streaming updates: relay daemon graph_delta events as MCP
+    # notifications to the connected client. See _daemon_notification_bridge
+    # docstring for the exact scope/limits of this piece.
+    bridge_task = asyncio.create_task(_daemon_notification_bridge(server))
 
     @server.list_tools()
     async def list_tools() -> list[Tool]:
@@ -321,8 +395,11 @@ async def run_server():
 
         return [TextContent(type="text", text=text)]
 
-    async with stdio_server() as (read_stream, write_stream):
-        await server.run(read_stream, write_stream, server.create_initialization_options())
+    try:
+        async with stdio_server() as (read_stream, write_stream):
+            await server.run(read_stream, write_stream, server.create_initialization_options())
+    finally:
+        bridge_task.cancel()
 
 
 def main():
