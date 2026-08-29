@@ -290,6 +290,8 @@ Links boundary nodes across repos: `__init__.py` exports, API endpoints, shared 
 | `astra query "task"` | Test context retrieval |
 | `astra bench "task"` | Benchmark token savings vs naive read |
 | `astra dashboard` | Launch web dashboard on `:7865` |
+| `astra hooks install` | Install a git pre-commit hook that re-indexes staged files |
+| `astra hooks uninstall` | Remove the ASTra pre-commit hook |
 
 ### Intelligence
 | Command | Description |
@@ -333,6 +335,12 @@ pip install astra-mcp
 # Or from source
 git clone https://github.com/Charan-place/ASTra-MCP.git
 cd ASTra-MCP && bash install.sh
+```
+
+### Step 1b — Or run it in Docker
+
+```bash
+docker compose up -d      # daemon + dashboard, .astra/ persisted in a volume
 ```
 
 ### Step 2 — Index your project
@@ -724,10 +732,10 @@ No. All computation is local. Nothing sent anywhere. Embeddings stored in `.astr
 - [x] Semantic drift detector
 - [x] Temporal knowledge graph
 - [x] Cross-repo federation
-- [ ] VS Code inline graph extension
+- [x] VS Code inline graph extension (scaffold — CodeLens, hover, sidebar tree view)
 - [ ] Team-shared index (S3/GCS backend)
-- [ ] HNSW indexing for 100k+ symbol corpora
-- [ ] Pre-commit hook installer
+- [x] HNSW indexing for 100k+ symbol corpora (`ASTRA_INDEX_BACKEND=hnsw`)
+- [x] Pre-commit hook installer (`astra hooks install`)
 
 ---
 
