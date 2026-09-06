@@ -24,5 +24,4 @@ node_modules
 .vscode
 Dockerfile
 docker-compose.yml
-README.md
 benchmarks
